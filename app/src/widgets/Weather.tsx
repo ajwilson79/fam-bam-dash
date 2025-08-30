@@ -1,5 +1,6 @@
 import React from 'react'
-import { codeToIcon, fetchWeather, getEnvCoords, type WeatherData } from '../lib/weather'
+import { codeToIcon, fetchWeather, type WeatherData } from '../lib/weather'
+import { loadSettings, subscribeSettings } from '../lib/settings'
 
 export default function Weather() {
   const [data, setData] = React.useState<WeatherData | null>(null)
@@ -9,8 +10,8 @@ export default function Weather() {
     let mounted = true
     async function load() {
       try {
-        const { lat, lon } = getEnvCoords()
-        const w = await fetchWeather(lat, lon)
+        const s = loadSettings()
+        const w = await fetchWeather(s.weather.lat, s.weather.lon)
         if (mounted) setData(w)
       } catch (e: any) {
         if (mounted) setError(e?.message || 'Weather failed')
@@ -18,9 +19,11 @@ export default function Weather() {
     }
     load()
     const id = setInterval(load, 15 * 60 * 1000) // refresh every 15 min
+    const unsub = subscribeSettings(() => load())
     return () => {
       mounted = false
       clearInterval(id)
+      unsub()
     }
   }, [])
 

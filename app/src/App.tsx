@@ -1,17 +1,20 @@
 import './index.css'
 import Calendar from './widgets/Calendar'
-
 import Weather from './widgets/Weather'
 import PhotoSlideshow from './widgets/PhotoSlideshow'
 import Todo from './widgets/Todo'
-
+import SettingsPanel from './widgets/SettingsPanel'
+import React from 'react'
 
 function App() {
+  const [openSettings, setOpenSettings] = React.useState(false)
+
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <div className="grid grid-cols-4 grid-rows-4 gap-4 p-4">
-        <div className="col-span-2 row-span-1 bg-slate-800 rounded-xl p-4 flex items-center justify-center">
+        <div className="col-span-2 row-span-1 bg-slate-800 rounded-xl p-4 flex items-center justify-between">
           <h1 className="text-4xl font-semibold">Fam Bam Dash</h1>
+          <button onClick={()=>setOpenSettings(true)} className="px-3 py-2 rounded bg-slate-700">Settings</button>
         </div>
         <div className="col-span-2 row-span-2 bg-slate-800 rounded-xl p-4 flex items-center justify-center">
           <Clock />
@@ -29,11 +32,10 @@ function App() {
           <Calendar />
         </div>
       </div>
+      <SettingsPanel open={openSettings} onClose={()=>setOpenSettings(false)} />
     </div>
   )
 }
-
-import React from 'react'
 
 function Clock() {
   const [now, setNow] = React.useState(new Date())

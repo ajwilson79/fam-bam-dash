@@ -1,5 +1,6 @@
 import React from 'react'
 import { fetchUpcomingEvents, formatEventTime, type GCalEvent } from '../lib/gcal'
+import { loadSettings, subscribeSettings } from '../lib/settings'
 
 export default function Calendar() {
   const [events, setEvents] = React.useState<GCalEvent[] | null>(null)
@@ -9,7 +10,8 @@ export default function Calendar() {
     let mounted = true
     async function load() {
       try {
-        const evs = await fetchUpcomingEvents({ maxResults: 10, windowDays: 60 })
+        const s = loadSettings()
+        const evs = await fetchUpcomingEvents({ calendarId: s.calendar.calendarId, maxResults: s.calendar.maxEvents, windowDays: 60 })
         if (mounted) setEvents(evs)
       } catch (e: any) {
         if (mounted) setError(e?.message || 'Calendar failed')
@@ -17,9 +19,11 @@ export default function Calendar() {
     }
     load()
     const id = setInterval(load, 15 * 60 * 1000)
+    const unsub = subscribeSettings(() => load())
     return () => {
       mounted = false
       clearInterval(id)
+      unsub()
     }
   }, [])
 
