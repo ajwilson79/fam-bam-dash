@@ -7,7 +7,8 @@ export type PhotoItem = {
 export function loadLocalPhotos(): PhotoItem[] {
   const modules = import.meta.glob('../assets/photos/**/*.{jpg,jpeg,png,gif,webp,avif}', {
     eager: true,
-    as: 'url',
+    query: '?url',
+    import: 'default',
   }) as Record<string, string>
   const items = Object.entries(modules).map(([path, url], idx) => ({
     id: `local-${idx}-${path}`,
