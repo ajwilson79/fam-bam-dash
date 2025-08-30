@@ -2,6 +2,7 @@ import './index.css'
 import Calendar from './widgets/Calendar'
 
 import Weather from './widgets/Weather'
+import PhotoSlideshow from './widgets/PhotoSlideshow'
 
 
 function App() {
@@ -16,6 +17,9 @@ function App() {
         </div>
         <div className="col-span-2 row-span-2 bg-slate-800 rounded-xl p-4 flex items-center justify-center">
           <Weather />
+        </div>
+        <div className="col-span-2 row-span-2 rounded-xl p-0">
+          <PhotoSlideshow />
         </div>
         <div className="col-span-4 row-span-1 bg-slate-800 rounded-xl p-4">
           <Calendar />
