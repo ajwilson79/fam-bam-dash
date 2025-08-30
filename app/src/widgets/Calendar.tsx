@@ -11,7 +11,7 @@ export default function Calendar() {
     async function load() {
       try {
         const s = loadSettings()
-        const evs = await fetchUpcomingEvents({ maxResults: s.calendar.maxEvents, windowDays: 60 })
+        const evs = await fetchUpcomingEvents({ calendarId: s.calendar.calendarId, maxResults: s.calendar.maxEvents, windowDays: 60 })
         if (mounted) setEvents(evs)
       } catch (e: any) {
         if (mounted) setError(e?.message || 'Calendar failed')
