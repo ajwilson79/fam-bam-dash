@@ -1,4 +1,6 @@
 import './index.css'
+import Weather from './widgets/Weather'
+
 
 function App() {
   return (
@@ -11,7 +13,7 @@ function App() {
           <Clock />
         </div>
         <div className="col-span-2 row-span-2 bg-slate-800 rounded-xl p-4 flex items-center justify-center">
-          <div>Weather (placeholder)</div>
+          <Weather />
         </div>
         <div className="col-span-4 row-span-1 bg-slate-800 rounded-xl p-4 flex items-center justify-center">
           <div>Calendar (placeholder)</div>
