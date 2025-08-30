@@ -1,5 +1,5 @@
 import React from 'react'
-import { addItem, addList, clearCompleted, loadState, removeItem, removeList, renameList, saveState, setActive, toggleItem, type TodoState } from '../lib/todo'
+import { addItem, addList, clearCompleted, loadState, removeItem, removeList, saveState, setActive, toggleItem, type TodoState } from '../lib/todo'
 
 export default function TodoWidget() {
   const [state, setState] = React.useState<TodoState>(() => loadState())
