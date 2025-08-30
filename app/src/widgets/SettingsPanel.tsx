@@ -1,10 +1,10 @@
 import React from 'react'
-import { defaultSettings, loadSettings, saveSettings, type Settings } from '../lib/settings'
+import { defaultSettings, loadSettings, setSettings, type Settings } from '../lib/settings'
 
 export default function SettingsPanel({ open, onClose }: { open: boolean; onClose: ()=>void }) {
   const [s, setS] = React.useState<Settings>(() => loadSettings())
 
-  React.useEffect(() => { saveSettings(s) }, [s])
+  React.useEffect(() => { setSettings(s) }, [s])
 
   if (!open) return null
 

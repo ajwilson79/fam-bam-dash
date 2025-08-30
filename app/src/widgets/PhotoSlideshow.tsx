@@ -1,6 +1,6 @@
 import React from 'react'
 import { fetchGooglePhotosAlbum, getGooglePhotosToken, loadLocalPhotos, shuffle, type PhotoItem } from '../lib/photos'
-import { loadSettings } from '../lib/settings'
+import { loadSettings, subscribeSettings } from '../lib/settings'
 
 function useLocalAndGooglePhotos() {
   const [photos, setPhotos] = React.useState<PhotoItem[]>([])
@@ -30,9 +30,10 @@ function useLocalAndGooglePhotos() {
       }
     }
     load()
-    // No interval by default; photos are mostly static. Could add refresh later.
+    const unsub = subscribeSettings(() => load())
     return () => {
       mounted = false
+      unsub()
     }
   }, [])
 
