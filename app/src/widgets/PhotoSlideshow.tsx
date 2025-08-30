@@ -1,5 +1,6 @@
 import React from 'react'
 import { fetchGooglePhotosAlbum, getGooglePhotosToken, loadLocalPhotos, shuffle, type PhotoItem } from '../lib/photos'
+import { loadSettings, subscribeSettings } from '../lib/settings'
 
 function useLocalAndGooglePhotos() {
   const [photos, setPhotos] = React.useState<PhotoItem[]>([])
@@ -11,9 +12,10 @@ function useLocalAndGooglePhotos() {
       try {
         const local = loadLocalPhotos()
         let merged = local
+        const s = loadSettings()
         const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
         const albumId = import.meta.env.VITE_GOOGLE_PHOTOS_ALBUM_ID as string | undefined
-        if (clientId && albumId) {
+        if (s.slideshow.useGooglePhotos && clientId && albumId) {
           try {
             const token = await getGooglePhotosToken(clientId)
             const remote = await fetchGooglePhotosAlbum(token, albumId, 200)
@@ -28,28 +30,33 @@ function useLocalAndGooglePhotos() {
       }
     }
     load()
-    // No interval by default; photos are mostly static. Could add refresh later.
+    const unsub = subscribeSettings(() => load())
     return () => {
       mounted = false
+      unsub()
     }
   }, [])
 
   return { photos, error }
 }
 
-export default function PhotoSlideshow({ intervalMs = 12000, fadeMs = 800, shuffleOn = true }: { intervalMs?: number; fadeMs?: number; shuffleOn?: boolean }) {
+export default function PhotoSlideshow({ intervalMs, fadeMs = 800, shuffleOn }: { intervalMs?: number; fadeMs?: number; shuffleOn?: boolean }) {
   const { photos, error } = useLocalAndGooglePhotos()
   const [index, setIndex] = React.useState(0)
   const [ready, setReady] = React.useState(false)
 
-  const list = React.useMemo(() => (shuffleOn ? shuffle(photos) : photos), [photos, shuffleOn])
+  const s = loadSettings()
+  const effectiveInterval = intervalMs ?? s.slideshow.intervalMs
+  const effectiveShuffle = shuffleOn ?? s.slideshow.shuffle
+
+  const list = React.useMemo(() => (effectiveShuffle ? shuffle(photos) : photos), [photos, effectiveShuffle])
 
   React.useEffect(() => {
     if (list.length === 0) return
     setReady(true)
-    const id = setInterval(() => setIndex((i) => (i + 1) % list.length), intervalMs)
+    const id = setInterval(() => setIndex((i) => (i + 1) % list.length), effectiveInterval)
     return () => clearInterval(id)
-  }, [list, intervalMs])
+  }, [list, effectiveInterval])
 
   if (error) return <div className="text-red-400">{error}</div>
   if (!ready || list.length === 0) return <div className="text-slate-300">Add images under src/assets/photos</div>

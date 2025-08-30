@@ -17,8 +17,10 @@ export function getEnvGCal() {
 export async function fetchUpcomingEvents({
   maxResults = 10,
   windowDays = 30,
-}: { maxResults?: number; windowDays?: number } = {}): Promise<GCalEvent[]> {
-  const { key, calendarId } = getEnvGCal()
+  calendarId: calendarIdOverride,
+}: { maxResults?: number; windowDays?: number; calendarId?: string } = {}): Promise<GCalEvent[]> {
+  const { key, calendarId: envCalendarId } = getEnvGCal()
+  const calendarId = calendarIdOverride || envCalendarId
   const now = new Date()
   const timeMin = now.toISOString()
   const timeMax = new Date(now.getTime() + windowDays * 24 * 60 * 60 * 1000).toISOString()
