@@ -25,8 +25,19 @@ export function loadSettings(): Settings {
   }
 }
 
-export function saveSettings(s: Settings) {
+// simple pub/sub for settings changes
+const listeners = new Set<() => void>()
+export function subscribeSettings(fn: () => void) {
+  listeners.add(fn)
+  return () => listeners.delete(fn)
+}
+
+export function setSettings(s: Settings) {
   try {
     localStorage.setItem(KEY, JSON.stringify(s))
-  } catch {}
+  } finally {
+    listeners.forEach((fn) => {
+      try { fn() } catch {}
+    })
+  }
 }

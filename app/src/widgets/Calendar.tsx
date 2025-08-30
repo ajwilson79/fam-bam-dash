@@ -1,6 +1,6 @@
 import React from 'react'
 import { fetchUpcomingEvents, formatEventTime, type GCalEvent } from '../lib/gcal'
-import { loadSettings } from '../lib/settings'
+import { loadSettings, subscribeSettings } from '../lib/settings'
 
 export default function Calendar() {
   const [events, setEvents] = React.useState<GCalEvent[] | null>(null)
@@ -19,9 +19,11 @@ export default function Calendar() {
     }
     load()
     const id = setInterval(load, 15 * 60 * 1000)
+    const unsub = subscribeSettings(() => load())
     return () => {
       mounted = false
       clearInterval(id)
+      unsub()
     }
   }, [])
 

@@ -1,6 +1,6 @@
 import React from 'react'
 import { codeToIcon, fetchWeather, type WeatherData } from '../lib/weather'
-import { loadSettings } from '../lib/settings'
+import { loadSettings, subscribeSettings } from '../lib/settings'
 
 export default function Weather() {
   const [data, setData] = React.useState<WeatherData | null>(null)
@@ -19,9 +19,11 @@ export default function Weather() {
     }
     load()
     const id = setInterval(load, 15 * 60 * 1000) // refresh every 15 min
+    const unsub = subscribeSettings(() => load())
     return () => {
       mounted = false
       clearInterval(id)
+      unsub()
     }
   }, [])
 
