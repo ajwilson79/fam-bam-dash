@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  fam-bam-dash:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Build-time environment variables
+        - VITE_LAT=${VITE_LAT:-37.7749}
+        - VITE_LON=${VITE_LON:--122.4194}
+        - VITE_GCAL_API_KEY=${VITE_GCAL_API_KEY:-}
+        - VITE_GCAL_CALENDAR_ID=${VITE_GCAL_CALENDAR_ID:-}
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID:-}
+        - VITE_GOOGLE_PHOTOS_ALBUM_ID=${VITE_GOOGLE_PHOTOS_ALBUM_ID:-}
+    container_name: fam-bam-dash
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    environment:
+      - TZ=America/Los_Angeles

@@ -4,51 +4,55 @@ import Weather from './widgets/Weather'
 import PhotoSlideshow from './widgets/PhotoSlideshow'
 import Todo from './widgets/Todo'
 import SettingsPanel from './widgets/SettingsPanel'
-import React from 'react'
+import Clock from './widgets/Clock'
+import { useState } from 'react'
 
 function App() {
-  const [openSettings, setOpenSettings] = React.useState(false)
+  const [openSettings, setOpenSettings] = useState(false)
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      <div className="grid grid-cols-4 grid-rows-4 gap-4 p-4">
-        <div className="col-span-2 row-span-1 bg-slate-800 rounded-xl p-4 flex items-center justify-between">
-          <h1 className="text-4xl font-semibold">Fam Bam Dash</h1>
-          <button onClick={()=>setOpenSettings(true)} className="px-3 py-2 rounded bg-slate-700">Settings</button>
+    <div className="min-h-screen bg-slate-900 text-white overflow-hidden">
+      {/* Header */}
+      <header className="bg-slate-800 px-6 py-4 flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Fam Bam Dash</h1>
+        <button 
+          onClick={() => setOpenSettings(true)} 
+          className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors touch-manipulation"
+          aria-label="Open settings"
+        >
+          ⚙️ Settings
+        </button>
+      </header>
+
+      {/* Main Grid Layout */}
+      <main className="h-[calc(100vh-72px)] p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left Column - Clock & Weather */}
+        <div className="flex flex-col gap-4">
+          <div className="bg-slate-800 rounded-xl p-6 flex items-center justify-center min-h-[200px]">
+            <Clock />
+          </div>
+          <div className="bg-slate-800 rounded-xl p-6 flex-1">
+            <Weather />
+          </div>
         </div>
-        <div className="col-span-2 row-span-2 bg-slate-800 rounded-xl p-4 flex items-center justify-center">
-          <Clock />
-        </div>
-        <div className="col-span-2 row-span-2 bg-slate-800 rounded-xl p-4 flex items-center justify-center">
-          <Weather />
-        </div>
-        <div className="col-span-2 row-span-2 rounded-xl p-0">
+
+        {/* Middle Column - Photo Slideshow */}
+        <div className="min-h-[400px] lg:min-h-0">
           <PhotoSlideshow />
         </div>
-        <div className="col-span-2 row-span-2 bg-slate-800 rounded-xl p-4">
-          <Todo />
-        </div>
-        <div className="col-span-4 row-span-1 bg-slate-800 rounded-xl p-4">
-          <Calendar />
-        </div>
-      </div>
-      <SettingsPanel open={openSettings} onClose={()=>setOpenSettings(false)} />
-    </div>
-  )
-}
 
-function Clock() {
-  const [now, setNow] = React.useState(new Date())
-  React.useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(id)
-  }, [])
-  const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-  const date = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
-  return (
-    <div className="text-center">
-      <div className="text-7xl font-bold">{time}</div>
-      <div className="text-2xl mt-2 text-slate-300">{date}</div>
+        {/* Right Column - Todo & Calendar */}
+        <div className="flex flex-col gap-4">
+          <div className="bg-slate-800 rounded-xl p-6 flex-1 min-h-[300px]">
+            <Todo />
+          </div>
+          <div className="bg-slate-800 rounded-xl p-6 max-h-[300px] overflow-auto">
+            <Calendar />
+          </div>
+        </div>
+      </main>
+
+      <SettingsPanel open={openSettings} onClose={() => setOpenSettings(false)} />
     </div>
   )
 }

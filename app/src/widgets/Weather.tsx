@@ -1,12 +1,12 @@
-import React from 'react'
+import { useEffect, useState } from 'react'
 import { codeToIcon, fetchWeather, type WeatherData } from '../lib/weather'
 import { loadSettings, subscribeSettings } from '../lib/settings'
 
 export default function Weather() {
-  const [data, setData] = React.useState<WeatherData | null>(null)
-  const [error, setError] = React.useState<string | null>(null)
+  const [data, setData] = useState<WeatherData | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true
     async function load() {
       try {
@@ -27,29 +27,36 @@ export default function Weather() {
     }
   }, [])
 
-  if (error) return <div className="text-red-400">{error}</div>
-  if (!data) return <div>Loading weather…</div>
+  if (error) return <div className="text-red-400 text-center">{error}</div>
+  if (!data) return <div className="text-center text-slate-400">Loading weather…</div>
 
   const currentIcon = codeToIcon(data.current.weathercode)
   const days = data.daily.time?.slice(0, 5) || []
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-center gap-4 mb-4">
-        <div className="text-5xl">{currentIcon}</div>
+    <div className="w-full h-full flex flex-col">
+      <h2 className="text-xl font-semibold mb-4">Weather</h2>
+      
+      {/* Current Weather */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="text-6xl">{currentIcon}</div>
         <div>
-          <div className="text-4xl font-bold">{Math.round(data.current.temperature)}°</div>
-          <div className="text-sm text-slate-300">Wind {Math.round(data.current.windspeed)} km/h</div>
+          <div className="text-5xl font-bold tabular-nums">{Math.round(data.current.temperature)}°</div>
+          <div className="text-sm text-slate-400">Wind {Math.round(data.current.windspeed)} km/h</div>
         </div>
       </div>
+
+      {/* 5-Day Forecast */}
       <div className="grid grid-cols-5 gap-2">
         {days.map((d, i) => (
           <div key={d} className="bg-slate-700 rounded-lg p-2 text-center">
-            <div className="text-xs text-slate-300">{new Date(d).toLocaleDateString(undefined, { weekday: 'short' })}</div>
+            <div className="text-xs text-slate-400 mb-1">
+              {new Date(d).toLocaleDateString(undefined, { weekday: 'short' })}
+            </div>
             <div className="text-2xl my-1">{codeToIcon(data.daily.weathercode[i])}</div>
-            <div className="text-sm">
-              <span className="font-semibold">{Math.round(data.daily.temperature_2m_max[i])}°</span>
-              <span className="text-slate-300"> / {Math.round(data.daily.temperature_2m_min[i])}°</span>
+            <div className="text-xs">
+              <div className="font-semibold">{Math.round(data.daily.temperature_2m_max[i])}°</div>
+              <div className="text-slate-400">{Math.round(data.daily.temperature_2m_min[i])}°</div>
             </div>
           </div>
         ))}

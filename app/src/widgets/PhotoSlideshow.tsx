@@ -1,12 +1,12 @@
-import React from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { fetchGooglePhotosAlbum, getGooglePhotosToken, loadLocalPhotos, shuffle, type PhotoItem } from '../lib/photos'
 import { loadSettings, subscribeSettings } from '../lib/settings'
 
 function useLocalAndGooglePhotos() {
-  const [photos, setPhotos] = React.useState<PhotoItem[]>([])
-  const [error, setError] = React.useState<string | null>(null)
+  const [photos, setPhotos] = useState<PhotoItem[]>([])
+  const [error, setError] = useState<string | null>(null)
 
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true
     async function load() {
       try {
@@ -42,24 +42,36 @@ function useLocalAndGooglePhotos() {
 
 export default function PhotoSlideshow({ intervalMs, fadeMs = 800, shuffleOn }: { intervalMs?: number; fadeMs?: number; shuffleOn?: boolean }) {
   const { photos, error } = useLocalAndGooglePhotos()
-  const [index, setIndex] = React.useState(0)
-  const [ready, setReady] = React.useState(false)
+  const [index, setIndex] = useState(0)
+  const [ready, setReady] = useState(false)
 
   const s = loadSettings()
   const effectiveInterval = intervalMs ?? s.slideshow.intervalMs
   const effectiveShuffle = shuffleOn ?? s.slideshow.shuffle
 
-  const list = React.useMemo(() => (effectiveShuffle ? shuffle(photos) : photos), [photos, effectiveShuffle])
+  const list = useMemo(() => (effectiveShuffle ? shuffle(photos) : photos), [photos, effectiveShuffle])
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (list.length === 0) return
     setReady(true)
     const id = setInterval(() => setIndex((i) => (i + 1) % list.length), effectiveInterval)
     return () => clearInterval(id)
   }, [list, effectiveInterval])
 
-  if (error) return <div className="text-red-400">{error}</div>
-  if (!ready || list.length === 0) return <div className="text-slate-300">Add images under src/assets/photos</div>
+  if (error) return (
+    <div className="w-full h-full bg-slate-800 rounded-xl flex items-center justify-center">
+      <div className="text-red-400">{error}</div>
+    </div>
+  )
+  
+  if (!ready || list.length === 0) return (
+    <div className="w-full h-full bg-slate-800 rounded-xl flex items-center justify-center">
+      <div className="text-slate-400 text-center p-6">
+        <div className="text-4xl mb-2">🖼️</div>
+        <div>Add images to src/assets/photos</div>
+      </div>
+    </div>
+  )
 
   const current = list[index]
   const next = list[(index + 1) % list.length]
