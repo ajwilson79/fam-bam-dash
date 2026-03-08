@@ -151,3 +151,8 @@ dist/
 
 # Docker
 docker-compose.override.yml
+
+# AI coding platforms
+.openhands/
+.cursor/
+.aider/
