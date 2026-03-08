@@ -5,7 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/typescript-5.8-blue.svg)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Fam Bam Dash is a customizable, touch-friendly smart home dashboard designed to be a centralized hub of information for your household. Inspired by platforms like Dakboard, it brings together the essentials your family needs—all in one sleek, web-based interface.
+Fam Bam Dash is a customizable, touch-friendly smart home dashboard designed to be a centralized hub of information for your household. It brings together the essentials your family needs—calendar, weather, photos, and to-do lists—all in one sleek, self-hosted, web-based interface.
 
 ## 📋 Key Features
 
