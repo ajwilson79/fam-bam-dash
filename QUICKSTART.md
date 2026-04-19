@@ -8,7 +8,7 @@ Get Fam Bam Dash running in 5 minutes.
 cd app
 npm install
 npm run dev
-# Open http://localhost:5173
+# Open http://localhost:12000
 ```
 
 No API keys are required to start. Weather works immediately with default coordinates; enter your ZIP code in Settings to switch to your location.
@@ -19,7 +19,7 @@ No API keys are required to start. Weather works immediately with default coordi
 git clone <your-repo-url>
 cd fam-bam-dash
 docker-compose up -d
-# Open http://localhost:3000
+# Open http://localhost:12000
 ```
 
 ## First-Run Configuration
@@ -39,19 +39,19 @@ Once the app is open:
 Create `app/.env.local` to set build-time defaults:
 
 ```bash
-# Fallback coordinates before a ZIP is entered
-VITE_LAT=37.7749
-VITE_LON=-122.4194
+# Google OAuth (for the Calendars admin tab)
+VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret   # no VITE_ prefix – never sent to browser
 
 # iCal feed proxy (server-side – no VITE_ prefix keeps it out of the browser bundle)
 GCAL_ICAL_URL=https://calendar.google.com/calendar/ical/you%40gmail.com/private-xxx/basic.ics
 
-# Google OAuth (for the Calendars admin tab)
-VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-client-secret
-
 # Timezone for calendar display
 VITE_TIMEZONE=America/New_York
+
+# Fallback coordinates before a ZIP is entered
+VITE_LAT=37.7749
+VITE_LON=-122.4194
 ```
 
 Restart the dev server after editing `.env.local`.
@@ -63,7 +63,7 @@ Restart the dev server after editing `.env.local`.
 1. Go to [Google Cloud Console](https://console.cloud.google.com/) → create a project
 2. Enable the **Google Calendar API**
 3. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID** (Web application)
-4. Add authorized redirect URIs: `http://localhost:5173` (and your production URL)
+4. Add authorized redirect URIs: `http://localhost:12000` (and your production URL/IP)
 5. Copy the Client ID and Client Secret into `.env.local`
 6. In the app: Settings → 📅 Calendars → **Connect Google Account**
 7. After authorizing, click **Sync Calendars** and toggle which ones to show
@@ -86,7 +86,7 @@ Photos land in `app/public/uploads/` and appear in the slideshow immediately.
 Settings → ✅ To-Do:
 - **Add list** – creates a column on the dashboard (one per person works well)
 - **Add items** to each list
-- On the dashboard, check off items; they disappear automatically after 10 minutes
+- On the dashboard, check off items; they disappear automatically after the configured delay (default 10 minutes, adjustable in Settings → ⚙️ Settings)
 - Drag the **⠿** handle to reorder columns on the dashboard or in the admin panel
 
 ## Common Commands
@@ -115,7 +115,7 @@ docker-compose build --no-cache && docker-compose up -d
 | Weather shows wrong city | Enter ZIP code in Settings → ⚙️ Settings |
 | Calendar empty | Connect Google account in Settings → 📅 Calendars, or set `GCAL_ICAL_URL` in `.env.local` |
 | Photos not showing | Upload via Settings → 🖼️ Photos, or copy files to `app/public/uploads/` |
-| Settings reset on reload | Ensure browser allows `localStorage` (not in private mode) |
-| OAuth redirect fails | Check the redirect URI in Google Cloud Console matches your dev URL exactly |
+| Settings reset on reload | Settings are also server-persisted; make sure the server is running |
+| OAuth redirect fails | Check the redirect URI in Google Cloud Console matches `http://localhost:12000` exactly |
 
 See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more detail.

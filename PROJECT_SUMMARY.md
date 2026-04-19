@@ -2,7 +2,7 @@
 
 ## What It Is
 
-A self-hosted family dashboard React app optimized for portrait-oriented wall displays. Single-page application served by a Vite dev server (or Nginx in production). No separate backend service — the Vite dev server doubles as an API proxy via custom plugins.
+A self-hosted family dashboard React app optimized for portrait-oriented wall displays. Single-page application served by a Vite server (`vite preview` in production). No separate backend service — all server-side routes are handled by Vite plugins running in the same Node.js process.
 
 ## Feature Set
 
@@ -10,29 +10,31 @@ A self-hosted family dashboard React app optimized for portrait-oriented wall di
 | Widget | Description |
 |--------|-------------|
 | **Clock** | Real-time clock and date, portrait-scaled with `clamp(min(vw,vh))` |
-| **Weather** | Current conditions + 5-day forecast via Open-Meteo; US ZIP code lookup via Zippopotam.us; switchable °F/mph ↔ °C/km/h |
-| **Calendar** | Upcoming events from Google Calendar (OAuth, iCal proxy, or JSON API fallback) |
-| **Photo Slideshow** | `object-contain` full-image display with blurred backdrop fill; in-browser upload |
-| **To-Do Panel** | Per-person columns, real checkboxes, 10-min auto-remove, drag-to-reorder |
+| **Weather** | Current conditions + scrollable 24-hour hourly + 5-day forecast via Open-Meteo; US ZIP code lookup via Zippopotam.us; switchable °F/mph ↔ °C/km/h |
+| **Calendar** | Upcoming events (today + 30 days) from Google Calendar; color-coded by calendar; supports OAuth, iCal proxy, or JSON API fallback |
+| **Photo Slideshow** | `object-contain` full-image display with blurred backdrop fill; in-browser drag-and-drop upload |
+| **To-Do Panel** | Per-person columns, real checkboxes, configurable auto-remove delay, drag-to-reorder |
 
 ### Settings Panel (4 tabs)
-- **⚙️ Settings** – ZIP code weather, units, slideshow interval/shuffle, dark/light theme, export JSON
+- **⚙️ Settings** – ZIP code weather, units, slideshow interval/shuffle, to-do auto-remove delay, dark/light theme, export JSON
 - **📅 Calendars** – Google OAuth connect, calendar sync, per-calendar toggles
 - **🖼️ Photos** – Drag-and-drop upload, thumbnail grid with delete
-- **✅ To-Do** – Add/rename/delete lists and items, drag-to-reorder
+- **✅ To-Do** – Add/rename/delete lists and items, drag-to-reorder, export/import backup
 
 ## Architecture
 
 ```
 Browser (React SPA)
-  └── Vite Dev Server (Node.js plugins)
+  └── Vite Server (Node.js — dev and vite preview)
+        ├── /api/sse          – Server-Sent Events; pushes reload to all tabs on any save
+        ├── /api/settings     – read/write app/data/settings.json + broadcast reload
+        ├── /api/todos        – read/write app/data/todos.json + broadcast reload
         ├── /api/photos/*     – upload/list/delete → app/public/uploads/
         ├── /api/ical         – proxies GCAL_ICAL_URL (avoids CORS)
+        ├── /api/gcal/*       – proxies Google Calendar REST API (avoids CORS)
         ├── /api/auth/token   – Google OAuth code exchange
         └── /api/auth/refresh – Google OAuth token refresh
 ```
-
-In production, the `dist/` static build is served by Nginx. The Vite middleware routes need a Node.js sidecar or equivalent for photo uploads and OAuth if you're not using the Vite preview server.
 
 ## Key Libraries
 
@@ -47,10 +49,10 @@ In production, the `dist/` static build is served by Nginx. The Vite middleware 
 
 ## Persistence
 
-| Data | Storage key | Notes |
-|------|-------------|-------|
-| App settings | `localStorage: fam-bam-settings` | Validated/clamped on load |
-| To-do lists | `localStorage: fam-bam-todo` | Pub/sub keeps panel and admin in sync |
+| Data | Storage | Notes |
+|------|---------|-------|
+| App settings | `localStorage: fam-bam-settings` + `data/settings.json` | Server file restores localStorage on startup |
+| To-do lists | `localStorage: fam-bam-todo` + `data/todos.json` | Server file restores localStorage on startup |
 | OAuth tokens | `localStorage: fam-bam-gcal-accounts` | Auto-refreshed when <5 min from expiry |
 | Uploaded photos | `app/public/uploads/` | Served as static files at `/uploads/` |
 
@@ -74,25 +76,27 @@ app/src/
   App.tsx              – root layout, theme toggle, OAuth callback handling
   index.css            – portrait grid, CSS custom properties, all component styles
   lib/
-    settings.ts        – Settings type, defaultSettings, validateSettings, pub/sub
+    settings.ts        – Settings type, defaultSettings, validateSettings, pub/sub, server sync
     weather.ts         – fetchWeather (imperial flag), zipToLatLon, codeToIcon
-    gcal.ts            – fetchEvents priority chain
-    gapi.ts            – Google Calendar REST API calls
+    gcal.ts            – fetchEvents priority chain; GCalEvent type with calendarColor
+    gapi.ts            – Google Calendar REST API calls; tags events with calendar color
     oauth.ts           – PKCE flow, token storage, getValidToken
     ical.ts            – minimal iCal parser (no npm dependency)
     photos.ts          – loadAllPhotos, loadUploadedPhotos, notifyPhotosChanged
-    todo.ts            – TodoState, toggleItem, autoRemoveExpired, reorderLists
+    todo.ts            – TodoState, toggleItem, autoRemoveExpired(state, ms), reorderLists
     retry.ts           – withRetry()
     utils.ts           – debounce()
   widgets/
-    Clock.tsx           – clock + date
-    Weather.tsx         – weather display, subscribes to settings
-    Calendar.tsx        – event list, subscribes to settings
-    PhotoSlideshow.tsx  – slideshow, listens for photos-changed event
-    TodoPanel.tsx       – dashboard columns, drag handles, countdown badge
-    SettingsPanel.tsx   – 4-tab modal
-    CalendarAdmin.tsx   – OAuth connect, sync, toggle
-    PhotoUpload.tsx     – upload zone, progress, thumbnail grid
-    TodoAdmin.tsx       – list/item CRUD, drag reorder
-  vite.config.ts       – photosPlugin, icalProxyPlugin, oauthPlugin
+    Clock.tsx               – clock + date
+    Weather.tsx             – compact current (default export) + WeatherFull with hourly + forecast
+    Calendar.tsx            – agenda view, color-coded dots per calendar
+    PhotoSlideshow.tsx      – slideshow, listens for photos-changed event
+    TodoPanel.tsx           – dashboard columns, drag handles, countdown badge
+    SettingsPanel.tsx       – 4-tab modal
+    CalendarAdmin.tsx       – OAuth connect, sync, toggle
+    PhotoUpload.tsx         – upload zone, progress, thumbnail grid
+    TodoAdmin.tsx           – list/item CRUD, drag reorder, export/import
+  vite.config.ts       – module-level sseClients + broadcast(); settingsPlugin (settings
+                         persistence + /api/sse endpoint), todosPlugin, photosPlugin,
+                         icalProxyPlugin, gcalProxyPlugin, oauthPlugin
 ```

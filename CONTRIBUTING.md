@@ -20,7 +20,7 @@ Quick start:
 ```bash
 cd app
 npm install
-cp .env.example .env
+cp .env.local.example .env.local
 npm run dev
 ```
 

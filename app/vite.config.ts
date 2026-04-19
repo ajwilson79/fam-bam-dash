@@ -47,6 +47,18 @@ function qs(params: Record<string, string>): string {
   return Object.entries(params).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&')
 }
 
+// ── SSE broadcast (shared by settings + todos plugins) ────────────────────────
+// Browsers connect to /api/sse once; any plugin can call broadcast() to push
+// a reload event to all open tabs except the one that triggered the change.
+
+const sseClients = new Set<http.ServerResponse>()
+
+function broadcast(event: string) {
+  for (const client of sseClients) {
+    try { client.write(`data: ${event}\n\n`) } catch { sseClients.delete(client) }
+  }
+}
+
 // ── Settings plugin ───────────────────────────────────────────────────────────
 
 const SETTINGS_FILE = path.resolve('data/settings.json')
@@ -56,7 +68,23 @@ function settingsPlugin(): Plugin {
 
   type Middleware = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void
   const middleware: Middleware = (req, res, next) => {
+    // SSE endpoint — browsers connect here to receive push events
+    if (req.url === '/api/sse' && req.method === 'GET') {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+      })
+      res.write(':\n\n') // establish the stream
+      sseClients.add(res)
+      const ping = setInterval(() => { try { res.write(':\n\n') } catch { /* ignore */ } }, 25_000)
+      req.on('close', () => { clearInterval(ping); sseClients.delete(res) })
+      return
+    }
+
     if (!req.url?.startsWith('/api/settings')) { next(); return }
+
     if (req.method === 'GET') {
       try {
         const data = fs.existsSync(SETTINGS_FILE) ? fs.readFileSync(SETTINGS_FILE, 'utf-8') : 'null'
@@ -68,7 +96,9 @@ function settingsPlugin(): Plugin {
       }
       return
     }
+
     if (req.method === 'POST') {
+      const senderTabId = (req.headers['x-tab-id'] as string) ?? ''
       let body = ''
       req.on('data', (chunk: Buffer) => { body += chunk.toString() })
       req.on('end', () => {
@@ -77,6 +107,8 @@ function settingsPlugin(): Plugin {
           fs.writeFileSync(SETTINGS_FILE, body, 'utf-8')
           res.writeHead(200, { 'Content-Type': 'application/json' })
           res.end('{"ok":true}')
+          // Tell all other tabs to reload with the new settings
+          broadcast(`reload:${senderTabId}`)
         } catch {
           res.writeHead(400, { 'Content-Type': 'application/json' })
           res.end('{"error":"invalid json"}')
@@ -113,6 +145,7 @@ function todosPlugin(): Plugin {
       return
     }
     if (req.method === 'POST') {
+      const senderTabId = (req.headers['x-tab-id'] as string) ?? ''
       let body = ''
       req.on('data', (chunk: Buffer) => { body += chunk.toString() })
       req.on('end', () => {
@@ -121,6 +154,7 @@ function todosPlugin(): Plugin {
           fs.writeFileSync(TODOS_FILE, body, 'utf-8')
           res.writeHead(200, { 'Content-Type': 'application/json' })
           res.end('{"ok":true}')
+          broadcast(`reload:${senderTabId}`)
         } catch {
           res.writeHead(400, { 'Content-Type': 'application/json' })
           res.end('{"error":"invalid json"}')

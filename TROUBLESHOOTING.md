@@ -7,8 +7,8 @@
 2. Look for red error messages
 3. Check the Network tab for failed requests (401, 404, CORS errors)
 
-### Check Dev Server Logs
-The terminal running `npm run dev` shows server-side errors (iCal proxy, OAuth token exchange, photo upload errors).
+### Check Server Logs
+The terminal running `npm run dev` (or `docker-compose logs -f`) shows server-side errors: iCal proxy, OAuth token exchange, photo upload errors, todos/settings API errors.
 
 ### Check Docker Logs
 ```bash
@@ -37,26 +37,26 @@ Open Settings → ⚙️ Settings → Units and select **°F / mph** or **°C / 
 The app tries three sources in order:
 
 1. **OAuth accounts** – open Settings → 📅 Calendars. If no accounts are listed, connect one.
-2. **iCal proxy** – check that `GCAL_ICAL_URL` is set in `.env.local` and the dev server was restarted after adding it.
+2. **iCal proxy** – check that `GCAL_ICAL_URL` is set in `app/.env.local` and the server was restarted after adding it.
 3. **JSON API** – verify `VITE_GCAL_API_KEY` and `VITE_GCAL_CALENDAR_ID` are set correctly.
 
 ### OAuth connect button does nothing / redirect fails
-- Verify `VITE_GOOGLE_CLIENT_ID` is set in `.env.local`
-- In Google Cloud Console → Credentials → your OAuth client, confirm the redirect URI matches your current URL exactly (e.g., `http://localhost:5173`)
+- Verify `VITE_GOOGLE_CLIENT_ID` is set in `app/.env.local`
+- In Google Cloud Console → Credentials → your OAuth client, confirm the redirect URI matches your current URL exactly (e.g., `http://localhost:12000` or `http://your-unraid-ip:12000`)
 - Check the browser didn't block the popup
 
 ### OAuth token exchange returns 400 or 401
-- Verify `GOOGLE_CLIENT_SECRET` is set in `.env.local` (no `VITE_` prefix)
-- Make sure the dev server was restarted after adding the secret
+- Verify `GOOGLE_CLIENT_SECRET` is set in `app/.env.local` (no `VITE_` prefix)
+- Make sure the server was restarted after adding the secret
 - Confirm the OAuth client type is **Web application** (not Desktop)
 
 ### Calendar shows events but not from a specific calendar
 Open Settings → 📅 Calendars → **Sync Calendars** to refresh the list, then toggle the desired calendar on.
 
 ### iCal proxy returns 502 or empty
-- Make sure `GCAL_ICAL_URL` uses the **secret** iCal address (Settings → your calendar → Integrate calendar → "Secret address in iCal format")
+- Make sure `GCAL_ICAL_URL` uses the **secret** iCal address (Google Calendar → Settings → your calendar → Integrate calendar → "Secret address in iCal format")
 - The URL must start with `https://calendar.google.com/calendar/ical/`
-- Restart the dev server after changing `.env.local`
+- Restart the server after changing `app/.env.local`
 
 ## Photos
 
@@ -66,7 +66,7 @@ Open Settings → 📅 Calendars → **Sync Calendars** to refresh the list, the
 3. Check the browser console for 404 errors on `/uploads/` paths
 
 ### Photo upload fails
-1. Check the terminal running `npm run dev` for error output
+1. Check the server logs for error output
 2. Confirm `app/public/uploads/` directory exists and is writable
 3. Try uploading a smaller file to rule out size limits
 
@@ -76,12 +76,12 @@ The slideshow listens for a `photos-changed` DOM event fired after upload. If it
 ## To-Do Lists
 
 ### Todo items not persisting across reloads
-- Todo state lives in `localStorage` under `fam-bam-todo`
-- Open the browser console and run `localStorage.getItem('fam-bam-todo')` to verify it's being written
-- Incognito/private mode may not persist `localStorage`
+- Todo state is saved to `localStorage` and also synced to `app/data/todos.json` on the server
+- If both are lost, check that the server's `data/` directory is writable
+- In Docker, verify the `/app/data` volume is correctly mapped to a persistent host path
 
 ### Checked items not auto-removing
-Items auto-remove 10 minutes after being checked. The cleanup runs on a 30-second timer. If items never disappear, check the browser console for JavaScript errors.
+Items auto-remove after the configured delay (default 10 minutes, adjustable in Settings → ⚙️ Settings → To-Do). The cleanup runs on a 30-second timer. If items never disappear, check the browser console for JavaScript errors.
 
 ### Can't drag to reorder lists
 Drag must start from the **⠿ handle** on the left side of each list header, not from the list body.
@@ -89,9 +89,9 @@ Drag must start from the **⠿ handle** on the left side of each list header, no
 ## Settings
 
 ### Settings reset after reload
-- `localStorage` must be enabled in your browser
-- Test: open the console and run `localStorage.setItem('test','1'); localStorage.getItem('test')` – should return `'1'`
-- Private/incognito mode often doesn't persist `localStorage`
+- Settings are saved to both `localStorage` and `app/data/settings.json`
+- On startup the app restores from the server file if localStorage is empty
+- If settings keep resetting, check that the server's `data/` directory is writable and the `/app/data` Docker volume is mapped
 
 ## Display / Layout
 
@@ -101,7 +101,7 @@ Drag must start from the **⠿ handle** on the left side of each list header, no
 - Minimum recommended resolution: 768×1024
 
 ### Dark/light mode toggle missing
-The theme toggle button (☀ / ☾) is a floating action button in the **bottom-left corner** of the dashboard. If you don't see it, check that nothing is overlapping it.
+The theme toggle button (☀ / ☾) is a floating action button in the **bottom-right corner** of the dashboard alongside the settings gear.
 
 ## Docker
 
@@ -117,28 +117,43 @@ docker system prune -a          # clear cache
 docker-compose build --no-cache
 ```
 
-### Photo uploads don't persist across container restarts
-Mount `app/public/uploads/` as a Docker volume:
-```yaml
-volumes:
-  - ./app/public/uploads:/app/public/uploads
-```
+### Data doesn't persist across container restarts
+Verify both volume mappings are present in your container config:
+- `/app/data` → a persistent host path (e.g., `/mnt/user/appdata/fam-bam-dash/data`)
+- `/app/public/uploads` → a persistent host path (e.g., `/mnt/user/appdata/fam-bam-dash/uploads`)
+
+## Live Sync (SSE)
+
+### Display screen doesn't reload when I make changes on another device
+1. Make sure both devices are accessing the **same server** (same IP/hostname and port)
+2. Open the browser console on the Pi and check for a successful `GET /api/sse` request in the Network tab — it should show as "pending" (kept open), not failed
+3. Some reverse proxies buffer SSE streams. If you're behind Nginx or similar, add these headers to your proxy config:
+   ```nginx
+   proxy_buffering off;
+   proxy_cache off;
+   proxy_set_header Connection '';
+   chunked_transfer_encoding on;
+   ```
+4. Verify the server is running — if it restarted, the Pi needs to reload once to re-establish the SSE connection
+
+### SSE connection drops frequently
+The server sends a keep-alive ping every 25 seconds. If the connection still drops, check for a timeout setting on your reverse proxy (`proxy_read_timeout` in Nginx should be at least 60 seconds).
 
 ## Environment Variables
 
 ### Changes to .env.local have no effect
-Vite reads `.env.local` at startup. Restart the dev server after any change:
+Vite reads `app/.env.local` at startup. Restart the server after any change:
 ```bash
 # Ctrl+C to stop, then:
 npm run dev
 ```
 
 ### Server-side variables not available
-Variables without the `VITE_` prefix (e.g. `GOOGLE_CLIENT_SECRET`, `GCAL_ICAL_URL`) are only available in Vite server plugins, not in the browser bundle. If a server endpoint is returning errors, verify these are set without the `VITE_` prefix.
+Variables without the `VITE_` prefix (e.g. `GOOGLE_CLIENT_SECRET`, `GCAL_ICAL_URL`) are only available in Vite server plugins, not in the browser bundle. If a server endpoint is returning errors, verify these are set **without** the `VITE_` prefix.
 
 ## Still Having Issues?
 
-1. Collect browser console errors (screenshot)
-2. Collect dev server terminal output
-3. Run `npm run build` – TypeScript errors appear here
+1. Collect browser console errors (screenshot or copy)
+2. Collect server terminal output (`docker-compose logs -f` or the `npm run dev` terminal)
+3. Run `npm run build` — TypeScript errors appear here
 4. Open a GitHub issue with: clear description, steps to reproduce, expected vs actual behavior, and the above output

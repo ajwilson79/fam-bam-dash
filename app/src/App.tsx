@@ -6,7 +6,7 @@ import SettingsPanel from './widgets/SettingsPanel'
 import Clock from './widgets/Clock'
 import TodoPanel from './widgets/TodoPanel'
 import { useEffect, useState } from 'react'
-import { loadSettings, setSettings, subscribeSettings, syncSettingsFromServer } from './lib/settings'
+import { getTabId, loadSettings, setSettings, subscribeSettings, syncSettingsFromServer } from './lib/settings'
 import { handleOAuthCallback } from './lib/oauth'
 import { syncCalendars } from './lib/gapi'
 import { syncFromServer } from './lib/todo'
@@ -23,6 +23,18 @@ function App() {
   // Restore settings and todos from server on startup (survives browser localStorage wipes)
   useEffect(() => { syncSettingsFromServer() }, [])
   useEffect(() => { syncFromServer() }, [])
+
+  // SSE: reload this tab when another tab saves settings
+  useEffect(() => {
+    const es = new EventSource('/api/sse')
+    es.onmessage = (e: MessageEvent<string>) => {
+      if (typeof e.data === 'string' && e.data.startsWith('reload:')) {
+        const senderTabId = e.data.slice(7)
+        if (senderTabId !== getTabId()) window.location.reload()
+      }
+    }
+    return () => es.close()
+  }, [])
 
   // Handle Google OAuth redirect-back
   useEffect(() => {

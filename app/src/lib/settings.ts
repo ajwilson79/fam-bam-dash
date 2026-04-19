@@ -9,6 +9,16 @@ export type Settings = {
 const KEY = 'fam-bam-settings'
 const DEFAULT_REFRESH_MS = 15 * 60 * 1000
 
+// Stable per-tab ID so the server can skip reloading the tab that made the change
+export function getTabId(): string {
+  let id = sessionStorage.getItem('fam-bam-tab-id')
+  if (!id) {
+    id = Math.random().toString(36).slice(2, 10)
+    sessionStorage.setItem('fam-bam-tab-id', id)
+  }
+  return id
+}
+
 export function defaultSettings(): Settings {
   return {
     weather: {
@@ -117,7 +127,7 @@ export function setSettings(s: Settings) {
     localStorage.setItem(KEY, JSON.stringify(s))
     fetch('/api/settings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tab-Id': getTabId() },
       body: JSON.stringify(s),
     }).catch(() => { /* best-effort */ })
   } finally {

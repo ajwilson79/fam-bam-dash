@@ -9,7 +9,7 @@ A self-hosted family dashboard that displays calendar events, weather, photos, a
 Yes. All APIs it uses are free for personal use (Open-Meteo for weather, Zippopotam.us for ZIP lookup, Google Calendar API free tier).
 
 ### Do I need coding experience?
-No coding experience is required to run it. If you can run `npm install && npm run dev` or `docker-compose up`, you're good.
+No coding experience is required to run it. If you can run `npm install && npm run dev` or `docker-compose up --build`, you're good.
 
 ### What devices can I use?
 Any device with a modern browser: Raspberry Pi, old tablet, wall-mounted TV, laptop. Portrait orientation works best.
@@ -23,8 +23,13 @@ For local use: just Node.js on your machine. For always-on display: a home serve
 Yes. `cd app && npm install && npm run dev` is all you need for development. See [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ### What port does it run on?
-Dev server: `http://localhost:5173` (default Vite port).
-Docker: `http://localhost:3000`.
+Dev server and Docker: `http://localhost:12000` (configured in `vite.config.ts` and `docker-compose.yml`).
+
+### Does it need a separate backend?
+No. The app runs as a single Node.js process using `vite preview`. All server-side routes (todos, settings, Google Calendar proxy, OAuth, photos, live sync) are handled by Vite plugins in the same process.
+
+### I have a wall display (Raspberry Pi) and a separate PC for admin. Will the display update automatically?
+Yes. Every open browser tab connects to a Server-Sent Events stream (`/api/sse`). Whenever you save settings or add/edit todos on your PC, the server immediately pushes a reload signal to all other open tabs. The Pi display reloads within a second — no keyboard or manual interaction needed. The tab that made the change is never reloaded.
 
 ## Weather
 
@@ -40,21 +45,27 @@ Yes. Settings → ⚙️ Settings → Units: choose **°F / mph** or **°C / km/
 ### What weather API does it use?
 [Open-Meteo](https://open-meteo.com/) — free, no API key required.
 
+### What does the weather section show?
+Current conditions (temperature, wind speed, icon), a scrollable 24-hour hourly forecast, and a 5-day daily forecast.
+
 ## Calendar
 
 ### How do I connect my Google Calendar?
 Settings → 📅 Calendars → **Connect Google Account**. This uses Google OAuth; you'll be redirected to Google to authorize access, then returned to the dashboard.
 
-Requires `VITE_GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env.local`. See [QUICKSTART.md](QUICKSTART.md) for setup steps.
+Requires `VITE_GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `app/.env.local`. See [QUICKSTART.md](QUICKSTART.md) for setup steps.
 
 ### Can I show multiple calendars?
-Yes. You can connect multiple Google accounts, and for each account you can toggle individual calendars on or off from the 📅 Calendars tab.
+Yes. You can connect multiple Google accounts, and for each account you can toggle individual calendars on or off from the 📅 Calendars tab. Each calendar's events are color-coded with that calendar's color from Google.
 
 ### I don't want to set up OAuth. Can I still show my calendar?
-Yes. Add your Google Calendar's **secret iCal URL** as `GCAL_ICAL_URL` in `.env.local`. The dev server proxies it server-side so there are no CORS issues. Find the URL in Google Calendar → Settings → your calendar → Integrate calendar → "Secret address in iCal format".
+Yes. Add your Google Calendar's **secret iCal URL** as `GCAL_ICAL_URL` in `app/.env.local`. The server proxies it server-side so there are no CORS issues. Find the URL in Google Calendar → Settings → your calendar → Integrate calendar → "Secret address in iCal format".
+
+### How far ahead does the calendar show?
+30 days, starting from today. Past events are not shown.
 
 ### How often does the calendar refresh?
-Every 15 minutes by default. Configurable in Settings → ⚙️ Settings (future option; currently set via `refreshIntervalMs` in exported settings JSON).
+Every 15 minutes by default. Configurable in Settings → ⚙️ Settings.
 
 ## Photos
 
@@ -71,7 +82,7 @@ JPG, JPEG, PNG, GIF, WEBP, AVIF.
 The slideshow uses `object-contain` to show the full image without cropping. The blurred backdrop fills the letterbox areas so the panel looks full rather than having black bars.
 
 ### Can I use Google Photos?
-Yes, if `VITE_GOOGLE_PHOTOS_ALBUM_ID` is set in `.env.local`. The slideshow merges uploaded photos and Google Photos album photos.
+Yes, if `VITE_GOOGLE_PHOTOS_ALBUM_ID` is set in `app/.env.local`. The slideshow merges uploaded photos and Google Photos album photos.
 
 ## To-Do Lists
 
@@ -79,23 +90,29 @@ Yes, if `VITE_GOOGLE_PHOTOS_ALBUM_ID` is set in `.env.local`. The slideshow merg
 Settings → ✅ To-Do → **Add list**. Create one list per person (e.g., "Mom", "Dad", "Kids"). Add items to each list.
 
 ### How do the checkboxes work?
-Check an item on the dashboard to mark it done. It stays visible for **10 minutes** so you can uncheck it if it was checked accidentally. After 10 minutes it's removed automatically.
+Check an item on the dashboard to mark it done. It stays visible for the configured auto-remove delay so you can uncheck it if it was checked accidentally. After that delay it's removed automatically.
+
+### How long until checked items disappear?
+10 minutes by default. Configurable in Settings → ⚙️ Settings → To-Do → "Auto-remove checked items after (minutes)".
 
 ### Can I reorder the lists?
 Yes. On the dashboard, drag the **⠿** handle on a list column to move it. You can also reorder them in Settings → ✅ To-Do using the same drag handle.
 
+### Are todos backed up?
+Yes. Every save writes to both `localStorage` and `app/data/todos.json` on the server. If your browser clears localStorage, the app restores from the server file on next load. In Docker, map `/app/data` to a persistent host path so it survives container updates.
+
 ## Appearance
 
 ### How do I toggle dark/light mode?
-Click the **☀ / ☾** floating button in the bottom-left corner of the dashboard.
+Click the **☀ / ☾** floating button in the bottom-right corner of the dashboard (next to the gear icon).
 
 ### Is the layout customizable?
-The current layout is a fixed two-column portrait grid. The left column shows the clock and weather; the right column shows photos, calendar, and to-do. To change the layout, edit `App.tsx` and `index.css`.
+The current layout is a fixed two-column portrait grid. The left column shows the calendar; the right column shows photos, clock + weather, and to-do lists. To change the layout, edit `App.tsx` and `index.css`.
 
 ## Privacy & Security
 
 ### Where is my data stored?
-Settings and to-do lists are in your browser's `localStorage`. Uploaded photos are in `app/public/uploads/` on the server. Nothing is sent to any third-party service except:
+Settings and to-do lists are in your browser's `localStorage` and backed up to `app/data/` on the server. Uploaded photos are in `app/public/uploads/` on the server. Nothing is sent to any third-party service except:
 - Weather coordinates → Open-Meteo
 - ZIP code → Zippopotam.us
 - OAuth tokens → Google (if calendar is connected)
@@ -119,7 +136,7 @@ After initial load:
 ### How can I improve performance?
 - Increase the slideshow interval (Settings → ⚙️ Settings → Interval)
 - Reduce the number of uploaded photos
-- Increase calendar/weather refresh intervals via exported settings JSON
+- Increase calendar/weather refresh intervals in Settings
 
 ## Still Have Questions?
 

@@ -1,3 +1,5 @@
+import { getTabId } from './settings'
+
 export type TodoItem = {
   id: string
   text: string
@@ -61,7 +63,7 @@ export function saveState(state: TodoState) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch {}
   fetch('/api/todos', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Tab-Id': getTabId() },
     body: JSON.stringify(state),
   }).catch(() => {}) // fire-and-forget; localStorage copy is always written first
   broadcast()

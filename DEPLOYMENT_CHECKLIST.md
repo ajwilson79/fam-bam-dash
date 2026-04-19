@@ -5,8 +5,7 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 ## ☑️ Pre-Deployment
 
 ### System Requirements
-- [ ] Docker installed and running
-- [ ] Docker Compose installed
+- [ ] Docker and Docker Compose installed
 - [ ] Git installed (for cloning)
 - [ ] 500MB+ free disk space
 - [ ] 512MB+ free RAM
@@ -30,19 +29,22 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 
 ### Configuration
 - [ ] `app/.env.local` file created
-- [ ] `VITE_LAT` / `VITE_LON` set as fallback coordinates (optional — can use ZIP code in-app instead)
 - [ ] `VITE_GOOGLE_CLIENT_ID` set (if using OAuth calendar)
 - [ ] `GOOGLE_CLIENT_SECRET` set without `VITE_` prefix (if using OAuth calendar)
 - [ ] `GCAL_ICAL_URL` set without `VITE_` prefix (if using iCal feed)
-- [ ] `VITE_GCAL_API_KEY` + `VITE_GCAL_CALENDAR_ID` set (if using JSON API fallback)
-- [ ] Port configured in `docker-compose.yml` (if not using 3000)
+- [ ] `VITE_TIMEZONE` set to your timezone (e.g. `America/New_York`)
+- [ ] OAuth redirect URI `http://your-server-ip:12000` added in Google Cloud Console (if using OAuth)
+- [ ] Port configured in `docker-compose.yml` (if not using default 12000)
+
+### Volume Paths (Docker / Unraid)
+- [ ] Host path for `/app/data` created and mapped (e.g. `/mnt/user/appdata/fam-bam-dash/data`)
+- [ ] Host path for `/app/public/uploads` created and mapped (e.g. `/mnt/user/appdata/fam-bam-dash/uploads`)
 
 ## ☑️ Build & Deploy
 
 ### Build
 - [ ] Docker image built: `docker-compose build`
 - [ ] Build completed without errors
-- [ ] Image size reasonable (~50-100MB)
 
 ### Deploy
 - [ ] Container started: `docker-compose up -d`
@@ -50,7 +52,7 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 - [ ] No errors in logs: `docker-compose logs -f`
 
 ### Verify
-- [ ] Dashboard accessible at `http://localhost:3000`
+- [ ] Dashboard accessible at `http://localhost:12000` (or your server IP)
 - [ ] Page loads without errors
 - [ ] Clock displays and updates
 - [ ] Weather loads (or shows error if not configured)
@@ -65,11 +67,13 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 - [ ] Settings button (⚙️ bottom-right) opens panel
 - [ ] ⚙️ Settings tab: ZIP code lookup resolves city/state
 - [ ] ⚙️ Settings tab: Units toggle (°F/mph or °C/km/h) works
+- [ ] ⚙️ Settings tab: To-Do auto-remove delay saves and takes effect
 - [ ] 📅 Calendars tab: OAuth connect flow completes (if configured)
 - [ ] 📅 Calendars tab: Calendar toggle saves and takes effect
 - [ ] 🖼️ Photos tab: Photo upload works; photos appear in slideshow
 - [ ] ✅ To-Do tab: Can add lists and items
 - [ ] Settings persist after page reload
+- [ ] Settings persist after container restart (volume mapped)
 - [ ] Can export settings as JSON
 - [ ] Can reset to defaults
 
@@ -77,29 +81,31 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 - [ ] Current temperature displays
 - [ ] Weather icon shows
 - [ ] Wind speed displays
+- [ ] 24-hour hourly forecast scrolls
 - [ ] 5-day forecast shows
-- [ ] Updates after 15 minutes (or on settings change)
+- [ ] Updates after the configured interval
 
 ### Calendar Widget
-- [ ] Events load (if API key configured)
-- [ ] Event times display correctly
-- [ ] Event locations show (if present)
-- [ ] Updates after 15 minutes
+- [ ] Events load from today forward (30-day window)
+- [ ] Event times display correctly in your timezone
+- [ ] Events are color-coded by calendar (if using OAuth)
+- [ ] Updates after the configured interval
 
 ### Photo Slideshow
 - [ ] Photos display (if added)
 - [ ] Photos transition smoothly
 - [ ] Slideshow advances automatically
 - [ ] Shuffle works (if enabled)
-- [ ] Google Photos load (if configured)
 
 ### Todo Widget
 - [ ] Lists created in Settings → ✅ To-Do appear as columns
+- [ ] Only lists with items are shown on the dashboard
 - [ ] Can check off items; checked items show countdown badge
-- [ ] Checked items auto-remove after 10 minutes
-- [ ] Unchecking before 10 minutes restores the item
+- [ ] Checked items auto-remove after configured delay
+- [ ] Unchecking before delay restores the item
 - [ ] Drag ⠿ handle reorders columns
 - [ ] Tasks persist after page reload
+- [ ] Tasks persist after container restart (volume mapped)
 
 ## ☑️ Display Setup
 
@@ -107,10 +113,9 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 - [ ] Display rotated to **portrait** orientation
 - [ ] Browser set to full-screen (F11)
 - [ ] Bookmarked for easy access
-- [ ] Auto-start configured (if desired)
 - [ ] Screen sleep disabled
 - [ ] Screen brightness adjusted
-- [ ] Dark or light mode selected (☀/☾ button bottom-left)
+- [ ] Dark or light mode selected (☀/☾ button bottom-right)
 
 ### Device Configuration
 - [ ] Device positioned properly
@@ -122,51 +127,32 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 ## ☑️ Network & Security
 
 ### Local Network
-- [ ] Dashboard accessible from other devices
+- [ ] Dashboard accessible from other devices on the LAN
 - [ ] Port forwarding configured (if remote access needed)
 - [ ] Firewall rules configured (if needed)
 
 ### Security (if public-facing)
 - [ ] HTTPS configured via reverse proxy
-- [ ] API keys restricted in Google Cloud Console
-- [ ] Authentication implemented (if needed)
-- [ ] Regular updates scheduled
-
-## ☑️ Optimization
-
-### Performance
-- [ ] Page loads quickly (<3 seconds)
-- [ ] Transitions are smooth
-- [ ] No lag when interacting
-- [ ] Memory usage reasonable
-- [ ] CPU usage low
-
-### Troubleshooting
-- [ ] Logs checked for warnings
-- [ ] Browser console checked for errors
-- [ ] All features tested
-- [ ] Backup of `.env` created
-- [ ] Documentation reviewed
+- [ ] `app/.env.local` not committed to git
+- [ ] Authentication implemented at proxy level (if needed)
 
 ## ☑️ Maintenance Plan
 
 ### Regular Tasks
 - [ ] Update schedule planned (monthly recommended)
 - [ ] Photo refresh schedule planned
-- [ ] Backup strategy defined
-- [ ] Monitoring setup (optional)
+- [ ] Backup strategy for `app/data/` and `app/public/uploads/` defined
 
 ### Documentation
 - [ ] README.md reviewed
 - [ ] DEPLOYMENT.md reviewed
 - [ ] FAQ.md reviewed for common issues
-- [ ] Contact info for support noted
 
 ## ☑️ Final Checks
 
 ### Functionality
 - [ ] All widgets working as expected
-- [ ] Settings persist correctly
+- [ ] Settings persist correctly (browser reload + container restart)
 - [ ] Data refreshes automatically
 - [ ] Touch interactions work smoothly
 - [ ] No console errors
@@ -181,8 +167,6 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 ### Production Ready
 - [ ] Tested for at least 24 hours
 - [ ] No crashes or freezes
-- [ ] Memory leaks checked
-- [ ] Network issues handled gracefully
 - [ ] Ready for family use!
 
 ## 🎉 Deployment Complete!
@@ -198,16 +182,6 @@ Once all items are checked, your Fam Bam Dash is ready for production use!
 
 ### If Issues Arise
 1. Check logs: `docker-compose logs -f`
-2. Review FAQ.md
-3. Search GitHub issues
-4. Open new issue if needed
-
-### Share Your Success
-- Star the repo on GitHub
-- Share photos of your setup
-- Contribute improvements
-- Help others in discussions
-
----
-
-**Congratulations on your successful deployment!** 🎊
+2. Review TROUBLESHOOTING.md
+3. Review FAQ.md
+4. Open a GitHub issue if needed
