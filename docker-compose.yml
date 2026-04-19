@@ -6,16 +6,25 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        # Build-time environment variables
-        - VITE_LAT=${VITE_LAT:-37.7749}
-        - VITE_LON=${VITE_LON:--122.4194}
-        - VITE_GCAL_API_KEY=${VITE_GCAL_API_KEY:-}
+        # Baked into the JS bundle at build time — required for Google OAuth
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+        # Optional build-time defaults (can be configured via the UI after first run)
         - VITE_GCAL_CALENDAR_ID=${VITE_GCAL_CALENDAR_ID:-}
-        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID:-}
-        - VITE_GOOGLE_PHOTOS_ALBUM_ID=${VITE_GOOGLE_PHOTOS_ALBUM_ID:-}
+        - VITE_TIMEZONE=${VITE_TIMEZONE:-America/New_York}
     container_name: fam-bam-dash
     ports:
-      - "3000:80"
+      - "12000:12000"
     restart: unless-stopped
     environment:
-      - TZ=America/Los_Angeles
+      # Runtime secrets — used by server-side plugins only, never sent to the browser
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GCAL_ICAL_URL=${GCAL_ICAL_URL:-}
+      - TZ=${VITE_TIMEZONE:-America/New_York}
+    volumes:
+      # Persist todos, settings, and uploaded photos across container restarts
+      - fam-bam-data:/app/data
+      - fam-bam-photos:/app/public/uploads
+
+volumes:
+  fam-bam-data:
+  fam-bam-photos:

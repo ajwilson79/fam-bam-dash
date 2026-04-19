@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  AUTO_REMOVE_MS, autoRemoveExpired, loadState, reorderLists,
+  autoRemoveExpired, loadState, reorderLists,
   saveState, subscribeTodo, toggleItem, type TodoState,
 } from '../lib/todo'
+import { loadSettings, subscribeSettings } from '../lib/settings'
 
-function timeLeft(checkedAt: number): string {
-  const ms = AUTO_REMOVE_MS - (Date.now() - checkedAt)
+function getAutoRemoveMs() {
+  return loadSettings().todo.autoRemoveMinutes * 60_000
+}
+
+function timeLeft(checkedAt: number, autoRemoveMs: number): string {
+  const ms = autoRemoveMs - (Date.now() - checkedAt)
   if (ms <= 0) return ''
   return `${Math.ceil(ms / 60_000)}m`
 }
@@ -14,11 +19,13 @@ export default function TodoPanel() {
   const [state, setState] = useState<TodoState>(loadState)
   const [, setTick] = useState(0)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+  const [autoRemoveMs, setAutoRemoveMs] = useState(getAutoRemoveMs)
 
   const dragIdx = useRef<number | null>(null)
   const canDrag = useRef(false)
 
   useEffect(() => { return subscribeTodo(() => setState(loadState())) }, [])
+  useEffect(() => { return subscribeSettings(() => setAutoRemoveMs(getAutoRemoveMs())) }, [])
 
   useEffect(() => {
     const up = () => { canDrag.current = false }
@@ -30,7 +37,7 @@ export default function TodoPanel() {
   useEffect(() => {
     const id = setInterval(() => {
       setTick(t => t + 1)
-      const { state: cleaned, changed } = autoRemoveExpired(loadState())
+      const { state: cleaned, changed } = autoRemoveExpired(loadState(), getAutoRemoveMs())
       if (changed) { saveState(cleaned); setState(cleaned) }
     }, 30_000)
     return () => clearInterval(id)
@@ -62,17 +69,21 @@ export default function TodoPanel() {
   }
   function onDragEnd() { setDragOverIdx(null); dragIdx.current = null }
 
+  const visibleLists = state.lists
+    .map((list, realIdx) => ({ list, realIdx }))
+    .filter(({ list }) => list.items.length > 0)
+
   return (
     <div className="todo-panel-grid">
-      {state.lists.map((list, idx) => (
+      {visibleLists.map(({ list, realIdx }, visIdx) => (
         <div
           key={list.id}
-          className={`todo-panel-col ${dragOverIdx === idx ? 'drag-over' : ''}`}
+          className={`todo-panel-col ${dragOverIdx === visIdx ? 'drag-over' : ''}`}
           draggable
-          onDragStart={e => onDragStart(e, idx)}
-          onDragOver={e => onDragOver(e, idx)}
+          onDragStart={e => onDragStart(e, realIdx)}
+          onDragOver={e => onDragOver(e, visIdx)}
           onDragLeave={() => setDragOverIdx(null)}
-          onDrop={e => onDrop(e, idx)}
+          onDrop={e => onDrop(e, realIdx)}
           onDragEnd={onDragEnd}
         >
           <div className="todo-panel-header">
@@ -99,7 +110,7 @@ export default function TodoPanel() {
                   </label>
                   <span className="todo-panel-text">{item.text}</span>
                   {item.done && item.checkedAt && (
-                    <span className="todo-panel-countdown">{timeLeft(item.checkedAt)}</span>
+                    <span className="todo-panel-countdown">{timeLeft(item.checkedAt, autoRemoveMs)}</span>
                   )}
                 </li>
               ))

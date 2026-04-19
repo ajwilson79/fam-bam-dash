@@ -1,14 +1,15 @@
 import './index.css'
 import Calendar from './widgets/Calendar'
-import Weather from './widgets/Weather'
+import Weather, { WeatherFull } from './widgets/Weather'
 import PhotoSlideshow from './widgets/PhotoSlideshow'
 import SettingsPanel from './widgets/SettingsPanel'
 import Clock from './widgets/Clock'
 import TodoPanel from './widgets/TodoPanel'
 import { useEffect, useState } from 'react'
-import { loadSettings, setSettings, subscribeSettings } from './lib/settings'
+import { loadSettings, setSettings, subscribeSettings, syncSettingsFromServer } from './lib/settings'
 import { handleOAuthCallback } from './lib/oauth'
 import { syncCalendars } from './lib/gapi'
+import { syncFromServer } from './lib/todo'
 
 function App() {
   const [openSettings, setOpenSettings] = useState(false)
@@ -18,6 +19,10 @@ function App() {
     const unsub = subscribeSettings(() => setTheme(loadSettings().theme))
     return () => { unsub() }
   }, [])
+
+  // Restore settings and todos from server on startup (survives browser localStorage wipes)
+  useEffect(() => { syncSettingsFromServer() }, [])
+  useEffect(() => { syncFromServer() }, [])
 
   // Handle Google OAuth redirect-back
   useEffect(() => {
@@ -65,6 +70,9 @@ function App() {
           </section>
           <section className="dash-weather">
             <Weather />
+          </section>
+          <section className="dash-weather-full">
+            <WeatherFull />
           </section>
         </div>
 

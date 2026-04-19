@@ -10,6 +10,7 @@ export type GCalEvent = {
   htmlLink?: string
   start: { date?: string; dateTime?: string; timeZone?: string }
   end: { date?: string; dateTime?: string; timeZone?: string }
+  calendarColor?: string
 }
 
 export async function fetchUpcomingEvents({

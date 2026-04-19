@@ -68,7 +68,7 @@ body {
 
 .dash-right {
   display: grid;
-  grid-template-rows: 44vh 17vh 1fr;
+  grid-template-rows: 44vh minmax(17vh, auto) 1fr;
   height: 100vh;
   overflow: hidden;
 }
@@ -82,6 +82,7 @@ body {
 .dash-middle {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
   border-top: 1px solid var(--color-divider);
   border-bottom: 1px solid var(--color-divider);
   overflow: hidden;
@@ -93,13 +94,22 @@ body {
   justify-content: center;
   padding: 0.5rem 2rem;
   border-right: 1px solid var(--color-divider);
-  overflow: hidden;
+  grid-row: 1;
 }
 
 .dash-weather {
   padding: 0.5rem 1.25rem;
   display: flex;
   align-items: center;
+  overflow: hidden;
+  grid-row: 1;
+}
+
+.dash-weather-full {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  padding: 0.4rem 1.25rem 0.5rem;
+  border-top: 1px solid var(--color-divider);
   overflow: hidden;
 }
 
@@ -152,11 +162,10 @@ body {
 }
 
 /* ── Weather ── */
-.weather-portrait {
+.weather-full {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  height: 100%;
+  flex-direction: column;
+  gap: 0.4rem;
   width: 100%;
 }
 
@@ -187,6 +196,35 @@ body {
   margin-top: 0.15rem;
   letter-spacing: 0.04em;
 }
+
+.weather-hourly {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+.weather-hourly::-webkit-scrollbar { display: none; }
+
+.weather-hour {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  min-width: 2.8rem;
+  padding: 0.3rem 0.2rem;
+  border-radius: 0.5rem;
+  background: var(--color-elevated);
+  flex-shrink: 0;
+}
+.weather-hour.is-now { background: var(--color-accent); color: #000; }
+.weather-hour.is-now .weather-hour-time,
+.weather-hour.is-now .weather-hour-temp { color: #000; }
+.weather-hour-time { font-size: 0.65rem; color: var(--color-muted); }
+.weather-hour-icon { font-size: 1rem; }
+.weather-hour-temp { font-size: 0.75rem; font-weight: 600; }
+.weather-hour-pop  { font-size: 0.6rem; color: #60a5fa; }
 
 .weather-forecast {
   display: flex;
@@ -265,10 +303,18 @@ body {
 
 .agenda-event {
   display: grid;
-  grid-template-columns: 5rem 1fr;
+  grid-template-columns: 0.6rem 5rem 1fr;
   gap: 0.4rem;
   padding: 0.25rem 0;
-  align-items: baseline;
+  align-items: center;
+}
+
+.agenda-event-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .agenda-event-time {
@@ -436,6 +482,12 @@ body {
 .todo-admin-new-list {
   display: flex;
   gap: 0.5rem;
+}
+
+.todo-admin-backup-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .todo-admin-hint {

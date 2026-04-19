@@ -2,6 +2,7 @@ export type Settings = {
   weather: { zip: string; lat: number; lon: number; refreshIntervalMs: number; units: 'imperial' | 'metric' }
   calendar: { calendarId: string; maxEvents: number; refreshIntervalMs: number }
   slideshow: { intervalMs: number; shuffle: boolean; useGooglePhotos: boolean }
+  todo: { autoRemoveMinutes: number }
   theme: 'dark' | 'light'
 }
 
@@ -23,6 +24,7 @@ export function defaultSettings(): Settings {
       refreshIntervalMs: DEFAULT_REFRESH_MS,
     },
     slideshow: { intervalMs: 12000, shuffle: true, useGooglePhotos: !!import.meta.env.VITE_GOOGLE_PHOTOS_ALBUM_ID },
+    todo: { autoRemoveMinutes: 10 },
     theme: 'dark',
   }
 }
@@ -51,6 +53,7 @@ function validateSettings(raw: unknown): Settings {
   const w = obj(r.weather)
   const c = obj(r.calendar)
   const sl = obj(r.slideshow)
+  const td = obj(r.todo)
   return {
     weather: {
       zip: strOr(w.zip, def.weather.zip),
@@ -69,6 +72,9 @@ function validateSettings(raw: unknown): Settings {
       shuffle: boolOr(sl.shuffle, def.slideshow.shuffle),
       useGooglePhotos: boolOr(sl.useGooglePhotos, def.slideshow.useGooglePhotos),
     },
+    todo: {
+      autoRemoveMinutes: Math.round(num(td.autoRemoveMinutes, def.todo.autoRemoveMinutes, 1, 1440)),
+    },
     theme: r.theme === 'light' ? 'light' : 'dark',
   }
 }
@@ -83,6 +89,23 @@ export function loadSettings(): Settings {
   }
 }
 
+// Restores settings from server file on startup (survives browser localStorage wipes).
+// If server has data but localStorage is empty, server wins.
+export async function syncSettingsFromServer(): Promise<void> {
+  try {
+    const res = await fetch('/api/settings')
+    if (!res.ok) return
+    const raw = await res.json() as unknown
+    if (raw === null) return
+    const local = localStorage.getItem(KEY)
+    if (!local) {
+      const validated = validateSettings(raw)
+      localStorage.setItem(KEY, JSON.stringify(validated))
+      listeners.forEach(fn => { try { fn() } catch {} })
+    }
+  } catch { /* server unavailable — local-only is fine */ }
+}
+
 const listeners = new Set<() => void>()
 export function subscribeSettings(fn: () => void) {
   listeners.add(fn)
@@ -92,6 +115,11 @@ export function subscribeSettings(fn: () => void) {
 export function setSettings(s: Settings) {
   try {
     localStorage.setItem(KEY, JSON.stringify(s))
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(s),
+    }).catch(() => { /* best-effort */ })
   } finally {
     listeners.forEach((fn) => {
       try { fn() } catch {}

@@ -8,7 +8,7 @@ export type TodoItem = {
 export type TodoList = { id: string; name: string; items: TodoItem[] }
 export type TodoState = { lists: TodoList[]; activeListId: string }
 
-export const AUTO_REMOVE_MS = 10 * 60 * 1000 // 10 minutes
+export const DEFAULT_AUTO_REMOVE_MS = 10 * 60 * 1000
 
 const STORAGE_KEY = 'fam-bam-todo'
 
@@ -34,36 +34,71 @@ export function defaultState(): TodoState {
   return { lists: [list1], activeListId: list1.id }
 }
 
+function parseState(raw: string): TodoState | null {
+  try {
+    const parsed = JSON.parse(raw)
+    if (!parsed || !Array.isArray(parsed.lists)) return null
+    return parsed as TodoState
+  } catch {
+    return null
+  }
+}
+
+// Synchronous read from localStorage — used for the initial render so the UI
+// never shows a blank state while waiting for the server response.
 export function loadState(): TodoState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return defaultState()
-    const parsed = JSON.parse(raw)
-    if (!parsed || !Array.isArray(parsed.lists)) return defaultState()
-    return parsed as TodoState
+    return parseState(raw) ?? defaultState()
   } catch {
     return defaultState()
   }
 }
 
+// Persist to localStorage (instant) AND to the server file (durable).
 export function saveState(state: TodoState) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch {}
+  fetch('/api/todos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(state),
+  }).catch(() => {}) // fire-and-forget; localStorage copy is always written first
   broadcast()
+}
+
+// Called once on app startup: pulls the server file and reconciles with localStorage.
+// If the server has newer/different data (e.g. after a browser wipe) it wins.
+export async function syncFromServer(): Promise<void> {
+  try {
+    const res = await fetch('/api/todos')
+    if (!res.ok) return
+    const raw = await res.text()
+    const serverState = parseState(raw)
+    if (!serverState) return
+    // If the server has actual lists but localStorage is empty/default, restore from server
+    const localRaw = localStorage.getItem(STORAGE_KEY)
+    const localState = localRaw ? parseState(localRaw) : null
+    const serverHasData = serverState.lists.some(l => l.items.length > 0 || l.name !== 'Family')
+    const localEmpty = !localState || (localState.lists.length === 1 && localState.lists[0].items.length === 0)
+    if (serverHasData && localEmpty) {
+      localStorage.setItem(STORAGE_KEY, raw)
+      broadcast()
+    }
+  } catch {}
 }
 
 // ── auto-remove logic ─────────────────────────────────────────────────────────
 
-// Removes items that have been checked for longer than AUTO_REMOVE_MS.
+// Removes items checked longer ago than autoRemoveMs.
 // Returns { state, changed } so callers can decide whether to persist.
-export function autoRemoveExpired(state: TodoState): { state: TodoState; changed: boolean } {
+export function autoRemoveExpired(state: TodoState, autoRemoveMs = DEFAULT_AUTO_REMOVE_MS): { state: TodoState; changed: boolean } {
   let changed = false
   const next: TodoState = {
     ...state,
     lists: state.lists.map(list => {
       const items = list.items.filter(item => {
-        if (item.done && item.checkedAt && Date.now() - item.checkedAt >= AUTO_REMOVE_MS) {
+        if (item.done && item.checkedAt && Date.now() - item.checkedAt >= autoRemoveMs) {
           changed = true
           return false
         }

@@ -17,10 +17,21 @@ type GCalListItem = {
 export async function fetchCalendarList(email: string): Promise<GCalListItem[]> {
   const token = await getValidToken(email)
   if (!token) throw new Error(`No valid token for ${email}`)
-  const res = await fetch('https://www.googleapis.com/calendar/v3/calendarList', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) throw new Error(`CalendarList ${res.status}: ${await res.text()}`)
+  let res: Response
+  try {
+    res = await fetch('/api/gcal/users/me/calendarList', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  } catch {
+    throw new Error('Could not reach the calendar proxy. Is the dev server running?')
+  }
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    if (res.status === 403 && body.includes('accessNotConfigured')) {
+      throw new Error('Google Calendar API is not enabled. Go to Google Cloud Console → APIs & Services → Library → enable "Google Calendar API".')
+    }
+    throw new Error(`CalendarList ${res.status}: ${body}`)
+  }
   const json = await res.json() as { items?: GCalListItem[] }
   return json.items ?? []
 }
@@ -56,7 +67,8 @@ export async function fetchEventsForCalendar(
 
   const now = new Date()
   const url = new URL(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`
+    `/api/gcal/calendars/${encodeURIComponent(calendarId)}/events`,
+    window.location.origin
   )
   url.searchParams.set('singleEvents', 'true')
   url.searchParams.set('orderBy', 'startTime')
@@ -85,7 +97,9 @@ export async function fetchAllOAuthEvents({
   const active = calendars.filter(c => accountEmails.has(c.accountEmail))
 
   const results = await Promise.allSettled(
-    active.map(c => fetchEventsForCalendar(c.accountEmail, c.calendarId, windowDays))
+    active.map(c => fetchEventsForCalendar(c.accountEmail, c.calendarId, windowDays)
+      .then(evs => evs.map(ev => ({ ...ev, calendarColor: c.backgroundColor })))
+    )
   )
 
   const all: GCalEvent[] = []

@@ -24,8 +24,8 @@ function localDateKey(date: Date): string {
 }
 
 function groupByDay(events: GCalEvent[]): Array<{ key: string; label: string; events: GCalEvent[] }> {
-  const todayKey = localDateKey(new Date())
-
+  const todayStr = localDateKey(new Date())
+  const todayStart = new Date(todayStr + 'T00:00:00')
   const map = new Map<string, { label: string; date: Date; events: GCalEvent[] }>()
   for (const ev of events) {
     const raw = ev.start.dateTime ?? (ev.start.date ? ev.start.date + 'T00:00:00' : null)
@@ -34,12 +34,13 @@ function groupByDay(events: GCalEvent[]): Array<{ key: string; label: string; ev
     const key = localDateKey(d)
     if (!map.has(key)) {
       const dayStart = new Date(key + 'T00:00:00')
-      const todayStart = new Date(todayKey + 'T00:00:00')
       map.set(key, { label: getDayLabel(dayStart, todayStart), date: dayStart, events: [] })
     }
     map.get(key)!.events.push(ev)
   }
-  return [...map.entries()].map(([key, val]) => ({ key, ...val }))
+  return [...map.entries()]
+    .filter(([key]) => key >= todayStr)
+    .map(([key, val]) => ({ key, ...val }))
 }
 
 function CalendarSkeleton() {
@@ -71,8 +72,8 @@ export default function Calendar() {
         const s = loadSettings()
         const evs = await fetchUpcomingEvents({
           calendarId: s.calendar.calendarId,
-          maxResults: s.calendar.maxEvents,
-          windowDays: 60,
+          maxResults: 100,
+          windowDays: 30,
         })
         if (mounted) setEvents(evs)
       } catch (e) {
@@ -122,6 +123,10 @@ export default function Calendar() {
           <div className="agenda-day-label">{day.label}</div>
           {day.events.map(ev => (
             <div key={ev.id} className="agenda-event">
+              <span
+                className="agenda-event-dot"
+                style={ev.calendarColor ? { background: ev.calendarColor } : { visibility: 'hidden' }}
+              />
               <div className="agenda-event-time">{eventTimeShort(ev)}</div>
               <div className="agenda-event-title">{ev.summary || 'Untitled'}</div>
             </div>

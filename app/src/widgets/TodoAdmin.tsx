@@ -71,8 +71,44 @@ export default function TodoAdmin() {
     setRenamingId(null)
   }
 
+  function exportTodos() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: 'fam-bam-todos.json',
+    })
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  function importTodos(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string) as TodoState
+        if (!Array.isArray(parsed.lists)) throw new Error('Invalid format')
+        commit(parsed)
+      } catch {
+        alert('Could not import: invalid todo backup file.')
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
   return (
     <div className="todo-admin">
+      {/* Backup / restore */}
+      <div className="todo-admin-backup-row">
+        <button className="todo-admin-btn small" onClick={exportTodos}>⬇ Export backup</button>
+        <label className="todo-admin-btn small" style={{ cursor: 'pointer' }}>
+          ⬆ Import backup
+          <input type="file" accept=".json" onChange={importTodos} style={{ display: 'none' }} />
+        </label>
+      </div>
+
       {/* Add new list */}
       <form onSubmit={handleAddList} className="todo-admin-new-list">
         <input

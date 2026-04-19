@@ -156,3 +156,4 @@ docker-compose.override.yml
 .openhands/
 .cursor/
 .aider/
+app/data/

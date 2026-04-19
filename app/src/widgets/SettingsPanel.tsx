@@ -176,6 +176,18 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
                 </div>
               </section>
 
+              {/* To-Do */}
+              <section className="bg-theme-elevated rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">✅ To-Do</h3>
+                <label className="flex flex-col">
+                  <span className="text-sm text-slate-300 mb-1">Auto-remove checked items after (minutes)</span>
+                  <input type="number" min={1} max={1440}
+                    value={s.todo.autoRemoveMinutes}
+                    onChange={e => update({ ...s, todo: { ...s.todo, autoRemoveMinutes: Math.max(1, Number(e.target.value)) } })}
+                    className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none w-32" />
+                </label>
+              </section>
+
               {/* Theme */}
               <section className="bg-theme-elevated rounded-lg p-4">
                 <h3 className="font-semibold text-lg mb-3">🎨 Theme</h3>

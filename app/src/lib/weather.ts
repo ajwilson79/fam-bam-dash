@@ -6,6 +6,12 @@ export type WeatherData = {
     windspeed: number
     weathercode: number
   }
+  hourly: {
+    time: string[]
+    temperature_2m: number[]
+    weathercode: number[]
+    precipitation_probability: number[]
+  }
   daily: {
     time: string[]
     weathercode: number[]
@@ -45,7 +51,9 @@ export async function fetchWeather(lat: number, lon: number, imperial = false): 
       latitude: String(lat),
       longitude: String(lon),
       current: 'temperature_2m,weather_code,wind_speed_10m',
+      hourly: 'temperature_2m,weather_code,precipitation_probability',
       daily: 'weather_code,temperature_2m_max,temperature_2m_min',
+      forecast_days: '6',
       timezone: 'auto',
       ...(imperial ? { temperature_unit: 'fahrenheit', wind_speed_unit: 'mph' } : {}),
     })
@@ -58,6 +66,12 @@ export async function fetchWeather(lat: number, lon: number, imperial = false): 
         temperature: json.current?.temperature_2m,
         windspeed: json.current?.wind_speed_10m,
         weathercode: json.current?.weather_code,
+      },
+      hourly: {
+        time: json.hourly?.time ?? [],
+        temperature_2m: json.hourly?.temperature_2m ?? [],
+        weathercode: json.hourly?.weather_code ?? [],
+        precipitation_probability: json.hourly?.precipitation_probability ?? [],
       },
       daily: {
         time: json.daily?.time,

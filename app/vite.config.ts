@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import { loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import * as https from 'node:https'
 import * as http from 'node:http'
@@ -44,6 +45,93 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
 
 function qs(params: Record<string, string>): string {
   return Object.entries(params).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&')
+}
+
+// ── Settings plugin ───────────────────────────────────────────────────────────
+
+const SETTINGS_FILE = path.resolve('data/settings.json')
+
+function settingsPlugin(): Plugin {
+  fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true })
+
+  type Middleware = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void
+  const middleware: Middleware = (req, res, next) => {
+    if (!req.url?.startsWith('/api/settings')) { next(); return }
+    if (req.method === 'GET') {
+      try {
+        const data = fs.existsSync(SETTINGS_FILE) ? fs.readFileSync(SETTINGS_FILE, 'utf-8') : 'null'
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(data)
+      } catch {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end('null')
+      }
+      return
+    }
+    if (req.method === 'POST') {
+      let body = ''
+      req.on('data', (chunk: Buffer) => { body += chunk.toString() })
+      req.on('end', () => {
+        try {
+          JSON.parse(body)
+          fs.writeFileSync(SETTINGS_FILE, body, 'utf-8')
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end('{"ok":true}')
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end('{"error":"invalid json"}')
+        }
+      })
+      return
+    }
+    next()
+  }
+  const attach = (s: { middlewares: { use: (h: Middleware) => void } }) => { s.middlewares.use(middleware) }
+  return { name: 'settings', configureServer: attach, configurePreviewServer: attach }
+}
+
+// ── Todos plugin ──────────────────────────────────────────────────────────────
+
+const TODOS_FILE = path.resolve('data/todos.json')
+
+function todosPlugin(): Plugin {
+  fs.mkdirSync(path.dirname(TODOS_FILE), { recursive: true })
+  if (!fs.existsSync(TODOS_FILE)) fs.writeFileSync(TODOS_FILE, '{"lists":[]}', 'utf-8')
+
+  type Middleware = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void
+  const middleware: Middleware = (req, res, next) => {
+    if (!req.url?.startsWith('/api/todos')) { next(); return }
+    if (req.method === 'GET') {
+      try {
+        const data = fs.readFileSync(TODOS_FILE, 'utf-8')
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(data)
+      } catch {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end('{"lists":[]}')
+      }
+      return
+    }
+    if (req.method === 'POST') {
+      let body = ''
+      req.on('data', (chunk: Buffer) => { body += chunk.toString() })
+      req.on('end', () => {
+        try {
+          JSON.parse(body) // validate before writing
+          fs.writeFileSync(TODOS_FILE, body, 'utf-8')
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end('{"ok":true}')
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end('{"error":"invalid json"}')
+        }
+      })
+      return
+    }
+    next()
+  }
+  const attach = (s: { middlewares: { use: (h: Middleware) => void } }) => { s.middlewares.use(middleware) }
+  return { name: 'todos', configureServer: attach, configurePreviewServer: attach }
 }
 
 // ── Photos plugin ─────────────────────────────────────────────────────────────
@@ -121,6 +209,38 @@ function icalProxyPlugin(): Plugin {
     configureServer(s) { s.middlewares.use('/api/ical', handler) },
     configurePreviewServer(s) { s.middlewares.use('/api/ical', handler) },
   }
+}
+
+// ── Google Calendar API proxy ─────────────────────────────────────────────────
+// Proxies /api/gcal/* → https://www.googleapis.com/calendar/v3/* server-side,
+// forwarding the Authorization header. Eliminates browser CORS issues entirely.
+
+function gcalProxyPlugin(): Plugin {
+  type Next = () => void
+  type Middleware = (req: http.IncomingMessage, res: http.ServerResponse, next: Next) => void
+
+  const middleware: Middleware = (req, res, next) => {
+    const url = req.url ?? ''
+    if (!url.startsWith('/api/gcal/')) { next(); return }
+    const suffix = url.slice('/api/gcal'.length)
+    const upstream_url = `https://www.googleapis.com/calendar/v3${suffix}`
+    const auth = (req.headers['authorization'] as string) ?? ''
+    fetch(upstream_url, { headers: { Authorization: auth, Accept: 'application/json' } })
+      .then(async upstream => {
+        const body = await upstream.text()
+        res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(body)
+      })
+      .catch(err => {
+        res.writeHead(502, { 'Content-Type': 'text/plain' })
+        res.end(`Upstream Google Calendar error: ${err}`)
+      })
+  }
+
+  const attach = (s: { middlewares: { use: (h: Middleware) => void } }) => {
+    s.middlewares.use(middleware)
+  }
+  return { name: 'gcal-proxy', configureServer: attach, configurePreviewServer: attach }
 }
 
 // ── OAuth plugin ──────────────────────────────────────────────────────────────
@@ -204,17 +324,24 @@ function oauthPlugin(): Plugin {
 
 // ── Vite config ───────────────────────────────────────────────────────────────
 
-export default defineConfig({
-  plugins: [react(), photosPlugin(), icalProxyPlugin(), oauthPlugin()],
-  test: {
-    environment: 'jsdom',
-    setupFiles: ['./src/__tests__/setup.ts'],
-  },
-  server: {
-    host: true,
-    port: 12000,
-    strictPort: true,
-    cors: true,
-    headers: { 'Access-Control-Allow-Origin': '*' },
-  },
+export default defineConfig(({ mode }) => {
+  // Load ALL .env.local vars (empty prefix = no filter) and inject into process.env
+  // so server-side plugins can access non-VITE_ variables like GCAL_ICAL_URL and GOOGLE_CLIENT_SECRET
+  const env = loadEnv(mode, process.cwd(), '')
+  Object.assign(process.env, env)
+
+  return {
+    plugins: [react(), settingsPlugin(), todosPlugin(), photosPlugin(), icalProxyPlugin(), gcalProxyPlugin(), oauthPlugin()],
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./src/__tests__/setup.ts'],
+    },
+    server: {
+      host: true,
+      port: 12000,
+      strictPort: true,
+      cors: true,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+    },
+  }
 })
