@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { codeToIcon, fetchWeather, type WeatherData } from '../lib/weather'
 import { loadSettings, subscribeSettings } from '../lib/settings'
+import { debounce } from '../lib/utils'
 
 export default function Weather() {
   const [data, setData] = useState<WeatherData | null>(null)
@@ -8,56 +9,61 @@ export default function Weather() {
 
   useEffect(() => {
     let mounted = true
+    let intervalId: ReturnType<typeof setInterval> | undefined
+
     async function load() {
       try {
+        setError(null)
         const s = loadSettings()
-        const w = await fetchWeather(s.weather.lat, s.weather.lon)
+        const w = await fetchWeather(s.weather.lat, s.weather.lon, s.weather.units === 'imperial')
         if (mounted) setData(w)
-      } catch (e: any) {
-        if (mounted) setError(e?.message || 'Weather failed')
+      } catch (e) {
+        if (mounted) setError(e instanceof Error ? e.message : 'Weather failed')
       }
     }
+
+    function scheduleInterval() {
+      clearInterval(intervalId)
+      intervalId = setInterval(load, loadSettings().weather.refreshIntervalMs)
+    }
+
     load()
-    const id = setInterval(load, 15 * 60 * 1000) // refresh every 15 min
-    const unsub = subscribeSettings(() => load())
+    scheduleInterval()
+    const unsub = subscribeSettings(debounce(() => { load(); scheduleInterval() }, 300))
+
     return () => {
       mounted = false
-      clearInterval(id)
+      clearInterval(intervalId)
       unsub()
     }
   }, [])
 
-  if (error) return <div className="text-red-400 text-center">{error}</div>
-  if (!data) return <div className="text-center text-slate-400">Loading weather…</div>
+  if (error) return <div style={{ color: '#f87171', fontSize: '0.875rem' }}>{error}</div>
+  if (!data) return <div className="text-theme-muted" style={{ fontSize: '0.875rem' }}>Loading weather…</div>
 
+  const imperial = loadSettings().weather.units === 'imperial'
   const currentIcon = codeToIcon(data.current.weathercode)
   const days = data.daily.time?.slice(0, 5) || []
 
   return (
-    <div className="w-full h-full flex flex-col">
-      <h2 className="text-xl font-semibold mb-4">Weather</h2>
-      
-      {/* Current Weather */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="text-6xl">{currentIcon}</div>
+    <div className="weather-portrait">
+      <div className="weather-current">
+        <span className="weather-icon">{currentIcon}</span>
         <div>
-          <div className="text-5xl font-bold tabular-nums">{Math.round(data.current.temperature)}°</div>
-          <div className="text-sm text-slate-400">Wind {Math.round(data.current.windspeed)} km/h</div>
+          <div className="weather-temp">{Math.round(data.current.temperature)}°</div>
+          <div className="weather-wind">Wind {Math.round(data.current.windspeed)} {imperial ? 'mph' : 'km/h'}</div>
         </div>
       </div>
 
-      {/* 5-Day Forecast */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="weather-forecast">
         {days.map((d, i) => (
-          <div key={d} className="bg-slate-700 rounded-lg p-2 text-center">
-            <div className="text-xs text-slate-400 mb-1">
+          <div key={d} className="weather-day">
+            <div className="weather-day-name">
               {new Date(d).toLocaleDateString(undefined, { weekday: 'short' })}
             </div>
-            <div className="text-2xl my-1">{codeToIcon(data.daily.weathercode[i])}</div>
-            <div className="text-xs">
-              <div className="font-semibold">{Math.round(data.daily.temperature_2m_max[i])}°</div>
-              <div className="text-slate-400">{Math.round(data.daily.temperature_2m_min[i])}°</div>
-            </div>
+            <div className="weather-day-icon">{codeToIcon(data.daily.weathercode[i])}</div>
+            <div className="weather-day-high">{Math.round(data.daily.temperature_2m_max[i])}°</div>
+            <div className="weather-day-low">{Math.round(data.daily.temperature_2m_min[i])}°</div>
           </div>
         ))}
       </div>

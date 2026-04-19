@@ -1,3 +1,8 @@
+import { withRetry } from './retry'
+import { parseIcal } from './ical'
+import { fetchAllOAuthEvents } from './gapi'
+import { loadAccounts } from './oauth'
+
 export type GCalEvent = {
   id: string
   summary?: string
@@ -7,59 +12,60 @@ export type GCalEvent = {
   end: { date?: string; dateTime?: string; timeZone?: string }
 }
 
-export function getEnvGCal() {
-  const key = import.meta.env.VITE_GCAL_API_KEY
-  const calendarId = import.meta.env.VITE_GCAL_CALENDAR_ID
-  if (!key || !calendarId) throw new Error('Missing VITE_GCAL_API_KEY or VITE_GCAL_CALENDAR_ID in env')
-  return { key, calendarId }
-}
-
 export async function fetchUpcomingEvents({
   maxResults = 10,
-  windowDays = 30,
+  windowDays = 60,
   calendarId: calendarIdOverride,
 }: { maxResults?: number; windowDays?: number; calendarId?: string } = {}): Promise<GCalEvent[]> {
-  const { key, calendarId: envCalendarId } = getEnvGCal()
-  const calendarId = calendarIdOverride || envCalendarId
-  const now = new Date()
-  const timeMin = now.toISOString()
-  const timeMax = new Date(now.getTime() + windowDays * 24 * 60 * 60 * 1000).toISOString()
-  const base = 'https://www.googleapis.com/calendar/v3/calendars'
-  const url = new URL(`${base}/${encodeURIComponent(calendarId)}/events`)
-  url.searchParams.set('key', key)
-  url.searchParams.set('singleEvents', 'true')
-  url.searchParams.set('orderBy', 'startTime')
-  url.searchParams.set('timeMin', timeMin)
-  url.searchParams.set('timeMax', timeMax)
-  url.searchParams.set('maxResults', String(maxResults))
-  url.searchParams.set('fields', 'items(id,summary,location,htmlLink,start,end)')
+  return withRetry(async () => {
+    // 1. OAuth — preferred when accounts are connected
+    if (loadAccounts().length > 0) {
+      return fetchAllOAuthEvents({ windowDays, maxResults })
+    }
 
-  const res = await fetch(url.toString())
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Google Calendar error: ${res.status} ${text}`)
-  }
-  const json = await res.json()
-  return (json.items || []) as GCalEvent[]
+    // 2. iCal proxy (Vite server-side feed, no API key needed)
+    const icalRes = await fetch('/api/ical').catch(() => null)
+    if (icalRes?.ok) {
+      const text = await icalRes.text()
+      if (text.includes('BEGIN:VCALENDAR')) {
+        return parseIcal(text, { maxResults, windowDays })
+      }
+    }
+
+    // 3. Google Calendar JSON API (requires VITE_GCAL_API_KEY)
+    const key = import.meta.env.VITE_GCAL_API_KEY as string | undefined
+    const calendarId = calendarIdOverride || (import.meta.env.VITE_GCAL_CALENDAR_ID as string | undefined)
+    if (!key || !calendarId) throw new Error('No calendar source configured. Connect a Google account in the admin panel.')
+
+    const now = new Date()
+    const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`)
+    url.searchParams.set('key', key)
+    url.searchParams.set('singleEvents', 'true')
+    url.searchParams.set('orderBy', 'startTime')
+    url.searchParams.set('timeMin', now.toISOString())
+    url.searchParams.set('timeMax', new Date(now.getTime() + windowDays * 86400000).toISOString())
+    url.searchParams.set('maxResults', String(maxResults))
+    url.searchParams.set('fields', 'items(id,summary,location,htmlLink,start,end)')
+
+    const res = await fetch(url.toString())
+    if (!res.ok) throw new Error(`Google Calendar error: ${res.status} ${await res.text()}`)
+    const json = await res.json() as { items?: GCalEvent[] }
+    return json.items ?? []
+  })
 }
 
 export function formatEventTime(ev: GCalEvent): string {
   const optsDate: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' }
-  const hasTimes = !!ev.start.dateTime || !!ev.end.dateTime
-  if (!hasTimes && ev.start.date && ev.end.date) {
-    const start = new Date(ev.start.date)
-    return `${start.toLocaleDateString(undefined, optsDate)} • All day`
+  if (!ev.start.dateTime && ev.start.date) {
+    return `${new Date(ev.start.date).toLocaleDateString(undefined, optsDate)} • All day`
   }
   const start = ev.start.dateTime ? new Date(ev.start.dateTime) : ev.start.date ? new Date(ev.start.date) : null
-  const end = ev.end.dateTime ? new Date(ev.end.dateTime) : ev.end.date ? new Date(ev.end.date) : null
+  const end = ev.end?.dateTime ? new Date(ev.end.dateTime) : null
   if (!start) return 'TBA'
   const optsTime: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' }
   const datePart = start.toLocaleDateString(undefined, optsDate)
   if (!end) return `${datePart} • ${start.toLocaleTimeString(undefined, optsTime)}`
-  // If end is same day, show time range; else show start date/time
   const sameDay = start.toDateString() === end.toDateString()
-  if (sameDay) {
-    return `${datePart} • ${start.toLocaleTimeString(undefined, optsTime)} – ${end.toLocaleTimeString(undefined, optsTime)}`
-  }
+  if (sameDay) return `${datePart} • ${start.toLocaleTimeString(undefined, optsTime)} – ${end.toLocaleTimeString(undefined, optsTime)}`
   return `${datePart} • ${start.toLocaleTimeString(undefined, optsTime)}`
 }

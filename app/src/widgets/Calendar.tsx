@@ -1,6 +1,61 @@
 import { useEffect, useState } from 'react'
-import { fetchUpcomingEvents, formatEventTime, type GCalEvent } from '../lib/gcal'
+import { fetchUpcomingEvents, type GCalEvent } from '../lib/gcal'
 import { loadSettings, subscribeSettings } from '../lib/settings'
+import { debounce } from '../lib/utils'
+
+function getDayLabel(dayStart: Date, todayStart: Date): string {
+  const diff = Math.round((dayStart.getTime() - todayStart.getTime()) / 86400000)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Tomorrow'
+  if (diff < 7) return dayStart.toLocaleDateString(undefined, { weekday: 'long' })
+  return dayStart.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
+}
+
+const TZ = import.meta.env.VITE_TIMEZONE || undefined
+
+function eventTimeShort(ev: GCalEvent): string {
+  if (!ev.start.dateTime) return 'All day'
+  const d = new Date(ev.start.dateTime)
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone: TZ })
+}
+
+function localDateKey(date: Date): string {
+  return date.toLocaleDateString('en-CA', { timeZone: TZ }) // YYYY-MM-DD
+}
+
+function groupByDay(events: GCalEvent[]): Array<{ key: string; label: string; events: GCalEvent[] }> {
+  const todayKey = localDateKey(new Date())
+
+  const map = new Map<string, { label: string; date: Date; events: GCalEvent[] }>()
+  for (const ev of events) {
+    const raw = ev.start.dateTime ?? (ev.start.date ? ev.start.date + 'T00:00:00' : null)
+    if (!raw) continue
+    const d = new Date(raw)
+    const key = localDateKey(d)
+    if (!map.has(key)) {
+      const dayStart = new Date(key + 'T00:00:00')
+      const todayStart = new Date(todayKey + 'T00:00:00')
+      map.set(key, { label: getDayLabel(dayStart, todayStart), date: dayStart, events: [] })
+    }
+    map.get(key)!.events.push(ev)
+  }
+  return [...map.entries()].map(([key, val]) => ({ key, ...val }))
+}
+
+function CalendarSkeleton() {
+  return (
+    <div className="agenda-wrap">
+      <div className="widget-label">Schedule</div>
+      {[0, 1, 2].map(i => (
+        <div key={i} className="agenda-day">
+          <div className="animate-pulse" style={{ height: '11px', background: 'var(--color-divider)', borderRadius: '3px', width: '50%', marginBottom: '8px' }} />
+          <div className="animate-pulse" style={{ height: '13px', background: 'var(--color-divider)', borderRadius: '3px', width: '80%', marginBottom: '4px' }} />
+          <div className="animate-pulse" style={{ height: '13px', background: 'var(--color-divider)', borderRadius: '3px', width: '65%' }} />
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export default function Calendar() {
   const [events, setEvents] = useState<GCalEvent[] | null>(null)
@@ -8,62 +63,71 @@ export default function Calendar() {
 
   useEffect(() => {
     let mounted = true
+    let intervalId: ReturnType<typeof setInterval> | undefined
+
     async function load() {
       try {
+        setError(null)
         const s = loadSettings()
-        const evs = await fetchUpcomingEvents({ 
-          calendarId: s.calendar.calendarId, 
-          maxResults: s.calendar.maxEvents, 
-          windowDays: 60 
+        const evs = await fetchUpcomingEvents({
+          calendarId: s.calendar.calendarId,
+          maxResults: s.calendar.maxEvents,
+          windowDays: 60,
         })
         if (mounted) setEvents(evs)
-      } catch (e: any) {
-        if (mounted) setError(e?.message || 'Calendar failed')
+      } catch (e) {
+        if (mounted) setError(e instanceof Error ? e.message : 'Calendar failed')
       }
     }
+
+    function scheduleInterval() {
+      clearInterval(intervalId)
+      intervalId = setInterval(load, loadSettings().calendar.refreshIntervalMs)
+    }
+
     load()
-    const id = setInterval(load, 15 * 60 * 1000)
-    const unsub = subscribeSettings(() => load())
+    scheduleInterval()
+    const unsub = subscribeSettings(debounce(() => { load(); scheduleInterval() }, 300))
+
     return () => {
       mounted = false
-      clearInterval(id)
+      clearInterval(intervalId)
       unsub()
     }
   }, [])
 
   if (error) return (
-    <div className="text-center">
-      <h2 className="text-xl font-semibold mb-2">📅 Calendar</h2>
-      <div className="text-red-400 text-sm">{error}</div>
+    <div className="agenda-wrap">
+      <div className="widget-label">Schedule</div>
+      <div style={{ color: '#f87171', fontSize: '0.8rem' }}>{error}</div>
     </div>
   )
-  
-  if (!events) return (
-    <div className="text-center">
-      <h2 className="text-xl font-semibold mb-2">📅 Calendar</h2>
-      <div className="text-slate-400">Loading events…</div>
-    </div>
-  )
-  
-  if (events.length === 0) return (
-    <div className="text-center">
-      <h2 className="text-xl font-semibold mb-2">📅 Calendar</h2>
-      <div className="text-slate-400">No upcoming events</div>
+
+  if (!events) return <CalendarSkeleton />
+
+  const days = groupByDay(events)
+
+  if (days.length === 0) return (
+    <div className="agenda-wrap">
+      <div className="widget-label">Schedule</div>
+      <div className="text-theme-muted" style={{ fontSize: '0.8rem' }}>No upcoming events</div>
     </div>
   )
 
   return (
-    <div className="w-full">
-      <h2 className="text-xl font-semibold mb-3">📅 Upcoming Events</h2>
-      <ul className="space-y-2">
-        {events.map((ev) => (
-          <li key={ev.id} className="bg-slate-700 rounded-lg p-3 hover:bg-slate-600 transition-colors">
-            <div className="font-semibold">{ev.summary || 'Untitled event'}</div>
-            <div className="text-sm text-slate-300 mt-1">{formatEventTime(ev)}</div>
-            {ev.location && <div className="text-xs text-slate-400 mt-1">📍 {ev.location}</div>}
-          </li>
-        ))}
-      </ul>
+    <div className="agenda-wrap">
+      <div className="widget-label">Schedule</div>
+      {days.map(day => (
+        <div key={day.key} className="agenda-day">
+          <div className="agenda-day-label">{day.label}</div>
+          {day.events.map(ev => (
+            <div key={ev.id} className="agenda-event">
+              <div className="agenda-event-time">{eventTimeShort(ev)}</div>
+              <div className="agenda-event-title">{ev.summary || 'Untitled'}</div>
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   )
 }

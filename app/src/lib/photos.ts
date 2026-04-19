@@ -1,7 +1,7 @@
 export type PhotoItem = {
   id: string
   src: string
-  source: 'local' | 'google'
+  source: 'local' | 'uploaded' | 'google'
 }
 
 export function loadLocalPhotos(): PhotoItem[] {
@@ -10,12 +10,30 @@ export function loadLocalPhotos(): PhotoItem[] {
     query: '?url',
     import: 'default',
   }) as Record<string, string>
-  const items = Object.entries(modules).map(([path, url], idx) => ({
-    id: `local-${idx}-${path}`,
+  return Object.entries(modules).map(([p, url], idx) => ({
+    id: `local-${idx}-${p}`,
     src: url,
     source: 'local' as const,
   }))
-  return items
+}
+
+export async function loadUploadedPhotos(): Promise<PhotoItem[]> {
+  try {
+    const res = await fetch('/api/photos/list')
+    if (!res.ok) return []
+    const files = await res.json() as Array<{ name: string; url: string }>
+    return files.map((f, i) => ({
+      id: `uploaded-${i}-${f.name}`,
+      src: f.url,
+      source: 'uploaded' as const,
+    }))
+  } catch {
+    return []
+  }
+}
+
+export function notifyPhotosChanged() {
+  window.dispatchEvent(new CustomEvent('photos-changed'))
 }
 
 export function shuffle<T>(arr: T[]): T[] {
@@ -52,7 +70,18 @@ export function loadGisScript(): Promise<void> {
   })
 }
 
-export async function getGooglePhotosToken(clientId: string, scope = 'https://www.googleapis.com/auth/photoslibrary.readonly') {
+type TokenCache = { token: string; expiresAt: number }
+let tokenCache: TokenCache | null = null
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000
+
+export async function getGooglePhotosToken(
+  clientId: string,
+  scope = 'https://www.googleapis.com/auth/photoslibrary.readonly'
+): Promise<string> {
+  if (tokenCache && Date.now() < tokenCache.expiresAt - TOKEN_EXPIRY_BUFFER_MS) {
+    return tokenCache.token
+  }
+
   await loadGisScript()
   return new Promise<string>((resolve, reject) => {
     try {
@@ -60,12 +89,18 @@ export async function getGooglePhotosToken(clientId: string, scope = 'https://ww
         client_id: clientId,
         scope,
         callback: (resp: any) => {
-          if (resp && resp.access_token) resolve(resp.access_token)
-          else reject(new Error('Failed to acquire access token'))
+          if (resp && resp.access_token) {
+            const expiresIn = Number(resp.expires_in ?? 3600)
+            tokenCache = { token: resp.access_token, expiresAt: Date.now() + expiresIn * 1000 }
+            resolve(resp.access_token)
+          } else {
+            reject(new Error('Failed to acquire access token'))
+          }
         },
         error_callback: (err: any) => reject(err),
       })
-      tokenClient.requestAccessToken({ prompt: 'consent' })
+      // Silent refresh if user already consented; full consent prompt on first auth
+      tokenClient.requestAccessToken({ prompt: tokenCache ? '' : 'consent' })
     } catch (e) {
       reject(e)
     }
@@ -102,9 +137,7 @@ export async function fetchGooglePhotosAlbum(token: string, albumId: string, max
     const got: GoogleMediaItem[] = (json.mediaItems || []).filter((it: any) => typeof it.baseUrl === 'string')
     for (const it of got) {
       if (!it.mimeType || !it.mimeType.startsWith('image/')) continue
-      // Request a reasonably large size; Google Photos supports size suffixes.
-      const src = `${it.baseUrl}=w1920-h1080` // 16:9-ish fill
-      out.push({ id: `google-${it.id}`, src, source: 'google' })
+      out.push({ id: `google-${it.id}`, src: `${it.baseUrl}=w1920-h1080`, source: 'google' })
       if (out.length >= maxItems) break
     }
     pageToken = json.nextPageToken

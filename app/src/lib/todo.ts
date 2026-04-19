@@ -1,9 +1,28 @@
-export type TodoItem = { id: string; text: string; done: boolean; updatedAt: number }
+export type TodoItem = {
+  id: string
+  text: string
+  done: boolean
+  updatedAt: number
+  checkedAt?: number  // set when checked; item auto-removes 10 min after this
+}
 export type TodoList = { id: string; name: string; items: TodoItem[] }
 export type TodoState = { lists: TodoList[]; activeListId: string }
 
+export const AUTO_REMOVE_MS = 10 * 60 * 1000 // 10 minutes
+
 const STORAGE_KEY = 'fam-bam-todo'
 
+// ── pub/sub so all components stay in sync ────────────────────────────────────
+const listeners = new Set<() => void>()
+export function subscribeTodo(fn: () => void): () => void {
+  listeners.add(fn)
+  return () => { listeners.delete(fn) }
+}
+function broadcast() {
+  listeners.forEach(fn => { try { fn() } catch {} })
+}
+
+// ── storage ───────────────────────────────────────────────────────────────────
 export function now() { return Date.now() }
 
 export function uid(prefix = '') {
@@ -12,8 +31,7 @@ export function uid(prefix = '') {
 
 export function defaultState(): TodoState {
   const list1: TodoList = { id: uid('list-'), name: 'Family', items: [] }
-  const list2: TodoList = { id: uid('list-'), name: 'Groceries', items: [] }
-  return { lists: [list1, list2], activeListId: list1.id }
+  return { lists: [list1], activeListId: list1.id }
 }
 
 export function loadState(): TodoState {
@@ -32,7 +50,32 @@ export function saveState(state: TodoState) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   } catch {}
+  broadcast()
 }
+
+// ── auto-remove logic ─────────────────────────────────────────────────────────
+
+// Removes items that have been checked for longer than AUTO_REMOVE_MS.
+// Returns { state, changed } so callers can decide whether to persist.
+export function autoRemoveExpired(state: TodoState): { state: TodoState; changed: boolean } {
+  let changed = false
+  const next: TodoState = {
+    ...state,
+    lists: state.lists.map(list => {
+      const items = list.items.filter(item => {
+        if (item.done && item.checkedAt && Date.now() - item.checkedAt >= AUTO_REMOVE_MS) {
+          changed = true
+          return false
+        }
+        return true
+      })
+      return items.length === list.items.length ? list : { ...list, items }
+    }),
+  }
+  return { state: next, changed }
+}
+
+// ── mutators ──────────────────────────────────────────────────────────────────
 
 export function addList(state: TodoState, name: string): TodoState {
   const list: TodoList = { id: uid('list-'), name, items: [] }
@@ -66,13 +109,30 @@ export function toggleItem(state: TodoState, listId: string, itemId: string): To
     ...state,
     lists: state.lists.map(l => l.id === listId ? {
       ...l,
-      items: l.items.map(it => it.id === itemId ? { ...it, done: !it.done, updatedAt: now() } : it)
-    } : l)
+      items: l.items.map(it => {
+        if (it.id !== itemId) return it
+        const becomingDone = !it.done
+        return {
+          ...it,
+          done: becomingDone,
+          checkedAt: becomingDone ? now() : undefined,
+          updatedAt: now(),
+        }
+      }),
+    } : l),
   }
 }
 
 export function removeItem(state: TodoState, listId: string, itemId: string): TodoState {
   return { ...state, lists: state.lists.map(l => l.id === listId ? { ...l, items: l.items.filter(it => it.id !== itemId) } : l) }
+}
+
+export function reorderLists(state: TodoState, fromIdx: number, toIdx: number): TodoState {
+  if (fromIdx === toIdx) return state
+  const lists = [...state.lists]
+  const [moved] = lists.splice(fromIdx, 1)
+  lists.splice(toIdx, 0, moved)
+  return { ...state, lists }
 }
 
 export function clearCompleted(state: TodoState, listId: string): TodoState {

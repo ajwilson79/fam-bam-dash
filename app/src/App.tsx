@@ -2,55 +2,98 @@ import './index.css'
 import Calendar from './widgets/Calendar'
 import Weather from './widgets/Weather'
 import PhotoSlideshow from './widgets/PhotoSlideshow'
-import Todo from './widgets/Todo'
 import SettingsPanel from './widgets/SettingsPanel'
 import Clock from './widgets/Clock'
-import { useState } from 'react'
+import TodoPanel from './widgets/TodoPanel'
+import { useEffect, useState } from 'react'
+import { loadSettings, setSettings, subscribeSettings } from './lib/settings'
+import { handleOAuthCallback } from './lib/oauth'
+import { syncCalendars } from './lib/gapi'
 
 function App() {
   const [openSettings, setOpenSettings] = useState(false)
+  const [theme, setTheme] = useState(() => loadSettings().theme)
+
+  useEffect(() => {
+    const unsub = subscribeSettings(() => setTheme(loadSettings().theme))
+    return () => { unsub() }
+  }, [])
+
+  // Handle Google OAuth redirect-back
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+    const state = params.get('state')
+    const error = params.get('error')
+
+    if (!code && !error) return
+
+    // Clean the URL immediately so a refresh doesn't re-trigger
+    window.history.replaceState({}, '', window.location.pathname)
+
+    if (error) {
+      console.warn('Google OAuth error:', error)
+      setOpenSettings(true)
+      return
+    }
+
+    if (code && state) {
+      handleOAuthCallback(code, state)
+        .then(account => syncCalendars(account.email))
+        .then(() => setOpenSettings(true))
+        .catch(err => {
+          console.error('OAuth callback failed:', err)
+          setOpenSettings(true)
+        })
+    }
+  }, [])
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white overflow-hidden">
-      {/* Header */}
-      <header className="bg-slate-800 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Fam Bam Dash</h1>
-        <button 
-          onClick={() => setOpenSettings(true)} 
-          className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors touch-manipulation"
+    <div className="dash-root" data-theme={theme}>
+      <aside className="dash-left">
+        <Calendar />
+      </aside>
+
+      <main className="dash-right">
+        <section className="dash-photo">
+          <PhotoSlideshow />
+        </section>
+
+        <div className="dash-middle">
+          <section className="dash-clock">
+            <Clock />
+          </section>
+          <section className="dash-weather">
+            <Weather />
+          </section>
+        </div>
+
+        <section className="dash-todos">
+          <TodoPanel />
+        </section>
+      </main>
+
+      <div className="dash-fabs">
+        <button
+          onClick={() => {
+            const next = theme === 'dark' ? 'light' : 'dark'
+            setTheme(next)
+            setSettings({ ...loadSettings(), theme: next })
+          }}
+          className="settings-fab"
+          aria-label="Toggle theme"
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? '☀' : '☾'}
+        </button>
+        <button
+          onClick={() => setOpenSettings(true)}
+          className="settings-fab"
           aria-label="Open settings"
         >
-          ⚙️ Settings
+          ⚙
         </button>
-      </header>
-
-      {/* Main Grid Layout */}
-      <main className="h-[calc(100vh-72px)] p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left Column - Clock & Weather */}
-        <div className="flex flex-col gap-4">
-          <div className="bg-slate-800 rounded-xl p-6 flex items-center justify-center min-h-[200px]">
-            <Clock />
-          </div>
-          <div className="bg-slate-800 rounded-xl p-6 flex-1">
-            <Weather />
-          </div>
-        </div>
-
-        {/* Middle Column - Photo Slideshow */}
-        <div className="min-h-[400px] lg:min-h-0">
-          <PhotoSlideshow />
-        </div>
-
-        {/* Right Column - Todo & Calendar */}
-        <div className="flex flex-col gap-4">
-          <div className="bg-slate-800 rounded-xl p-6 flex-1 min-h-[300px]">
-            <Todo />
-          </div>
-          <div className="bg-slate-800 rounded-xl p-6 max-h-[300px] overflow-auto">
-            <Calendar />
-          </div>
-        </div>
-      </main>
+      </div>
 
       <SettingsPanel open={openSettings} onClose={() => setOpenSettings(false)} />
     </div>
