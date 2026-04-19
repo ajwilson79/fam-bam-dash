@@ -1,276 +1,98 @@
-# Fam Bam Dash - Project Summary
+# Fam Bam Dash – Project Summary
 
-## 🎯 What We Built
+## What It Is
 
-A complete, production-ready family dashboard application with:
-- Modern React/TypeScript frontend
-- Docker deployment setup
-- Comprehensive documentation
-- Touch-friendly UI optimized for wall-mounted displays
+A self-hosted family dashboard React app optimized for portrait-oriented wall displays. Single-page application served by a Vite dev server (or Nginx in production). No separate backend service — the Vite dev server doubles as an API proxy via custom plugins.
 
-## 📁 Project Structure
+## Feature Set
+
+### Widgets
+| Widget | Description |
+|--------|-------------|
+| **Clock** | Real-time clock and date, portrait-scaled with `clamp(min(vw,vh))` |
+| **Weather** | Current conditions + 5-day forecast via Open-Meteo; US ZIP code lookup via Zippopotam.us; switchable °F/mph ↔ °C/km/h |
+| **Calendar** | Upcoming events from Google Calendar (OAuth, iCal proxy, or JSON API fallback) |
+| **Photo Slideshow** | `object-contain` full-image display with blurred backdrop fill; in-browser upload |
+| **To-Do Panel** | Per-person columns, real checkboxes, 10-min auto-remove, drag-to-reorder |
+
+### Settings Panel (4 tabs)
+- **⚙️ Settings** – ZIP code weather, units, slideshow interval/shuffle, dark/light theme, export JSON
+- **📅 Calendars** – Google OAuth connect, calendar sync, per-calendar toggles
+- **🖼️ Photos** – Drag-and-drop upload, thumbnail grid with delete
+- **✅ To-Do** – Add/rename/delete lists and items, drag-to-reorder
+
+## Architecture
 
 ```
-fam-bam-dash/
-├── app/                          # React application
-│   ├── src/
-│   │   ├── assets/photos/       # Local photo storage
-│   │   ├── lib/                 # Business logic
-│   │   │   ├── settings.ts      # Settings management with localStorage
-│   │   │   ├── weather.ts       # Open-Meteo API integration
-│   │   │   ├── gcal.ts          # Google Calendar API
-│   │   │   ├── photos.ts        # Photo loading (local + Google Photos)
-│   │   │   └── todo.ts          # Todo list state management
-│   │   ├── widgets/             # React components
-│   │   │   ├── Clock.tsx        # Real-time clock
-│   │   │   ├── Weather.tsx      # Weather display
-│   │   │   ├── Calendar.tsx     # Calendar events
-│   │   │   ├── Todo.tsx         # Todo lists
-│   │   │   ├── PhotoSlideshow.tsx  # Photo slideshow
-│   │   │   └── SettingsPanel.tsx   # Settings UI
-│   │   ├── App.tsx              # Main layout
-│   │   ├── main.tsx             # Entry point
-│   │   └── index.css            # Global styles
-│   ├── package.json             # Dependencies
-│   ├── vite.config.ts           # Vite configuration
-│   ├── tsconfig.json            # TypeScript config
-│   └── tailwind.config.js       # Tailwind config
-├── Dockerfile                    # Multi-stage Docker build
-├── docker-compose.yml            # Docker Compose config
-├── nginx.conf                    # Production web server config
-├── .env.example                  # Environment template
-├── .dockerignore                 # Docker build exclusions
-├── .gitignore                    # Git exclusions
-├── setup.sh / setup.ps1          # Setup scripts
-├── build.sh / build.ps1          # Build scripts
-└── Documentation/
-    ├── README.md                 # Main documentation
-    ├── QUICKSTART.md             # Quick start guide
-    ├── DEPLOYMENT.md             # Deployment guide
-    ├── DEVELOPMENT.md            # Development guide
-    ├── CONTRIBUTING.md           # Contribution guidelines
-    ├── FAQ.md                    # Frequently asked questions
-    └── CHANGELOG.md              # Version history
+Browser (React SPA)
+  └── Vite Dev Server (Node.js plugins)
+        ├── /api/photos/*     – upload/list/delete → app/public/uploads/
+        ├── /api/ical         – proxies GCAL_ICAL_URL (avoids CORS)
+        ├── /api/auth/token   – Google OAuth code exchange
+        └── /api/auth/refresh – Google OAuth token refresh
 ```
 
-## ✨ Features Implemented
+In production, the `dist/` static build is served by Nginx. The Vite middleware routes need a Node.js sidecar or equivalent for photo uploads and OAuth if you're not using the Vite preview server.
 
-### Core Widgets
-1. **Clock** - Real-time display with date
-2. **Weather** - Current conditions + 5-day forecast (Open-Meteo)
-3. **Calendar** - Google Calendar integration with upcoming events
-4. **Photos** - Slideshow with local and Google Photos support
-5. **Todo** - Multiple lists with add/delete/complete functionality
+## Key Libraries
 
-### Settings & Persistence
-- Runtime configuration via Settings panel
-- localStorage persistence for settings and todos
-- Build-time defaults from environment variables
-- Export/import settings as JSON
+| What | How |
+|------|-----|
+| Weather | Open-Meteo (free, no key) |
+| ZIP → lat/lon | Zippopotam.us (free, no key) |
+| Google Calendar | OAuth 2.0 PKCE (no client secret in browser), iCal parser (no npm dep), JSON API fallback |
+| Photos | Browser File API + `fetch` POST to `/api/photos/upload` |
+| State sync | Pub/sub pattern in `settings.ts` and `todo.ts` |
+| Retry | `withRetry()` in `lib/retry.ts` wraps all external fetches |
 
-### UI/UX
-- Dark theme (slate color palette)
-- Touch-friendly design (44px+ touch targets)
-- Responsive layout (mobile to desktop)
-- Smooth transitions and animations
-- Auto-refresh for weather and calendar
+## Persistence
 
-### Deployment
-- Docker multi-stage build (optimized size)
-- Nginx for production serving
-- docker-compose for easy deployment
-- Environment variable configuration
-- Setup scripts for Windows and Linux
+| Data | Storage key | Notes |
+|------|-------------|-------|
+| App settings | `localStorage: fam-bam-settings` | Validated/clamped on load |
+| To-do lists | `localStorage: fam-bam-todo` | Pub/sub keeps panel and admin in sync |
+| OAuth tokens | `localStorage: fam-bam-gcal-accounts` | Auto-refreshed when <5 min from expiry |
+| Uploaded photos | `app/public/uploads/` | Served as static files at `/uploads/` |
 
-## 🛠️ Technology Stack
+## Environment Variables
 
-### Frontend
-- **React 19** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool and dev server
-- **Tailwind CSS 4** - Styling
-- **localStorage** - Client-side persistence
+| Variable | Purpose | In browser? |
+|----------|---------|-------------|
+| `VITE_LAT` / `VITE_LON` | Fallback weather coordinates | Yes |
+| `VITE_GOOGLE_CLIENT_ID` | OAuth client ID | Yes (intentionally public) |
+| `VITE_GCAL_API_KEY` | Calendar JSON API key | Yes |
+| `VITE_GCAL_CALENDAR_ID` | Default calendar ID | Yes |
+| `VITE_GOOGLE_PHOTOS_ALBUM_ID` | Google Photos album | Yes |
+| `VITE_TIMEZONE` | Calendar display timezone | Yes |
+| `GOOGLE_CLIENT_SECRET` | OAuth token exchange | **No** (server only) |
+| `GCAL_ICAL_URL` | iCal feed URL | **No** (server only) |
 
-### APIs
-- **Open-Meteo** - Free weather API (no key required)
-- **Google Calendar API** - Calendar integration
-- **Google Photos API** - Photo integration (optional)
+## File Map (key files)
 
-### Deployment
-- **Docker** - Containerization
-- **Nginx** - Web server
-- **docker-compose** - Orchestration
-
-## 🚀 How to Use
-
-### Quick Start
-```bash
-# 1. Clone and setup
-git clone <repo-url>
-cd fam-bam-dash
-./setup.sh  # or setup.ps1 on Windows
-
-# 2. Start
-docker-compose up -d
-
-# 3. Access
-# http://localhost:3000
 ```
-
-### Configuration
-1. Edit `.env` with API keys (optional)
-2. Or configure in Settings panel at runtime
-3. Add photos to `app/src/assets/photos/`
-4. Rebuild if adding photos: `docker-compose build`
-
-## 📝 Key Files to Know
-
-### For Users
-- `.env` - Configuration (copy from `.env.example`)
-- `docker-compose.yml` - Deployment settings
-- `README.md` - Main documentation
-- `QUICKSTART.md` - Fast setup guide
-
-### For Developers
-- `app/src/App.tsx` - Main layout
-- `app/src/lib/` - Business logic
-- `app/src/widgets/` - UI components
-- `DEVELOPMENT.md` - Dev guide
-
-### For Deployment
-- `Dockerfile` - Container build
-- `nginx.conf` - Web server config
-- `DEPLOYMENT.md` - Deployment options
-
-## 🎨 Design Decisions
-
-### Why React?
-- Component-based architecture
-- Large ecosystem
-- Easy to customize
-- Good performance
-
-### Why Docker?
-- Consistent deployment
-- Easy updates
-- Portable across platforms
-- No dependency conflicts
-
-### Why localStorage?
-- No backend needed
-- Simple and fast
-- Works offline
-- Sufficient for single-user dashboard
-
-### Why Tailwind CSS?
-- Rapid development
-- Consistent design
-- Small bundle size
-- Easy customization
-
-## 🔄 Workflow
-
-### Development
-```bash
-cd app
-npm install
-npm run dev
-# Edit code, hot reload works
+app/src/
+  App.tsx              – root layout, theme toggle, OAuth callback handling
+  index.css            – portrait grid, CSS custom properties, all component styles
+  lib/
+    settings.ts        – Settings type, defaultSettings, validateSettings, pub/sub
+    weather.ts         – fetchWeather (imperial flag), zipToLatLon, codeToIcon
+    gcal.ts            – fetchEvents priority chain
+    gapi.ts            – Google Calendar REST API calls
+    oauth.ts           – PKCE flow, token storage, getValidToken
+    ical.ts            – minimal iCal parser (no npm dependency)
+    photos.ts          – loadAllPhotos, loadUploadedPhotos, notifyPhotosChanged
+    todo.ts            – TodoState, toggleItem, autoRemoveExpired, reorderLists
+    retry.ts           – withRetry()
+    utils.ts           – debounce()
+  widgets/
+    Clock.tsx           – clock + date
+    Weather.tsx         – weather display, subscribes to settings
+    Calendar.tsx        – event list, subscribes to settings
+    PhotoSlideshow.tsx  – slideshow, listens for photos-changed event
+    TodoPanel.tsx       – dashboard columns, drag handles, countdown badge
+    SettingsPanel.tsx   – 4-tab modal
+    CalendarAdmin.tsx   – OAuth connect, sync, toggle
+    PhotoUpload.tsx     – upload zone, progress, thumbnail grid
+    TodoAdmin.tsx       – list/item CRUD, drag reorder
+  vite.config.ts       – photosPlugin, icalProxyPlugin, oauthPlugin
 ```
-
-### Building
-```bash
-npm run build
-# Creates optimized production build
-```
-
-### Deployment
-```bash
-docker-compose build
-docker-compose up -d
-# Runs in production mode
-```
-
-### Updating
-```bash
-git pull
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
-```
-
-## 🎯 Next Steps
-
-### For You
-1. Configure your API keys
-2. Add your photos
-3. Deploy to your server/Pi
-4. Set up on a display
-5. Enjoy your dashboard!
-
-### Future Enhancements
-- More widgets (news, stocks, traffic)
-- Drag-and-drop layout
-- Theme customization
-- Multi-language support
-- Mobile app
-- Voice control
-- Smart home integration
-
-## 📚 Documentation Guide
-
-- **README.md** - Start here for overview
-- **QUICKSTART.md** - Fastest way to get running
-- **DEPLOYMENT.md** - Detailed deployment options
-- **DEVELOPMENT.md** - For developers/customization
-- **CONTRIBUTING.md** - How to contribute
-- **FAQ.md** - Common questions
-- **CHANGELOG.md** - Version history
-
-## 🎉 What Makes This Special
-
-1. **No Backend Required** - Fully client-side
-2. **Self-Hosted** - Your data stays private
-3. **Touch-Optimized** - Perfect for tablets
-4. **Easy Deployment** - Docker makes it simple
-5. **Customizable** - Open source, modify as needed
-6. **Well Documented** - Comprehensive guides
-7. **Production Ready** - Optimized and tested
-
-## 💡 Tips for Success
-
-1. **Start Simple** - Get basic setup working first
-2. **Add Features Gradually** - Enable APIs one at a time
-3. **Test Locally** - Use `npm run dev` before deploying
-4. **Read the Docs** - Most questions are answered
-5. **Join Community** - GitHub discussions for help
-6. **Contribute Back** - Share improvements!
-
-## 🐛 If Something Goes Wrong
-
-1. Check `docker-compose logs -f`
-2. Check browser console (F12)
-3. Read FAQ.md
-4. Search GitHub issues
-5. Open new issue with details
-
-## 🙏 Credits
-
-Built with:
-- React team for amazing framework
-- Vite team for blazing fast tooling
-- Tailwind team for utility-first CSS
-- Open-Meteo for free weather API
-- Google for Calendar/Photos APIs
-- Docker for containerization
-- Nginx for web serving
-
-## 📄 License
-
-MIT License - See LICENSE file
-
----
-
-**You now have a complete, production-ready family dashboard!** 🎊
-
-Deploy it, customize it, and enjoy having all your family info in one place.

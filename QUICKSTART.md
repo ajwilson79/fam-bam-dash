@@ -1,180 +1,121 @@
 # Quick Start Guide
 
-Get Fam Bam Dash running in 5 minutes!
+Get Fam Bam Dash running in 5 minutes.
 
-## 🚀 Fastest Way (Docker)
+## Fastest Way (Local Dev)
 
 ```bash
-# 1. Clone the repo
-git clone <your-repo-url>
-cd fam-bam-dash
-
-# 2. Setup (creates .env and builds)
-./setup.sh        # Linux/Mac
-# or
-./setup.ps1       # Windows
-
-# 3. Start
-docker-compose up -d
-
-# 4. Open browser
-# http://localhost:3000
+cd app
+npm install
+npm run dev
+# Open http://localhost:5173
 ```
 
-## 📝 Manual Setup
+No API keys are required to start. Weather works immediately with default coordinates; enter your ZIP code in Settings to switch to your location.
 
-### Prerequisites
-- Docker & Docker Compose installed
-- API keys ready (optional, can add later)
+## Docker
 
-### Steps
-
-1. **Get the code**
 ```bash
 git clone <your-repo-url>
 cd fam-bam-dash
-```
-
-2. **Configure**
-```bash
-cp .env.example .env
-# Edit .env with your settings
-```
-
-3. **Build & Run**
-```bash
 docker-compose up -d
+# Open http://localhost:3000
 ```
 
-4. **Access**
-Open `http://localhost:3000` in your browser
+## First-Run Configuration
 
-## ⚙️ Quick Configuration
+Once the app is open:
 
-### In the App
-1. Click "Settings" button in top-right
-2. Update your location (lat/lon)
-3. Add your Google Calendar ID
-4. Adjust photo slideshow settings
-5. Click "Close"
+1. Click the **⚙️ gear button** (bottom-right corner) to open Settings
+2. Go to the **⚙️ Settings** tab:
+   - Enter your **ZIP code** and click **Look up** – the app resolves it to coordinates and shows the city name
+   - Choose **°F / mph** or **°C / km/h** under Units
+3. Go to the **📅 Calendars** tab to connect a Google account (requires OAuth setup – see below)
+4. Go to the **🖼️ Photos** tab to upload family photos directly from the browser
+5. Go to the **✅ To-Do** tab to create lists for each family member
 
-### Environment Variables (Optional)
-Edit `.env` file:
+## Environment Variables (Optional)
+
+Create `app/.env.local` to set build-time defaults:
+
 ```bash
-VITE_LAT=37.7749              # Your latitude
-VITE_LON=-122.4194            # Your longitude
-VITE_GCAL_API_KEY=your_key    # Google Calendar API key
-VITE_GCAL_CALENDAR_ID=your@email.com
+# Fallback coordinates before a ZIP is entered
+VITE_LAT=37.7749
+VITE_LON=-122.4194
+
+# iCal feed proxy (server-side – no VITE_ prefix keeps it out of the browser bundle)
+GCAL_ICAL_URL=https://calendar.google.com/calendar/ical/you%40gmail.com/private-xxx/basic.ics
+
+# Google OAuth (for the Calendars admin tab)
+VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+
+# Timezone for calendar display
+VITE_TIMEZONE=America/New_York
 ```
 
-## 🔑 Getting API Keys
+Restart the dev server after editing `.env.local`.
 
-### Google Calendar (5 minutes)
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create project → Enable "Google Calendar API"
-3. Create API Key
-4. Add to `.env` or Settings panel
+## Setting Up Google Calendar
 
-### Google Photos (Optional, 10 minutes)
-1. Same project → Enable "Google Photos Library API"
-2. Create OAuth 2.0 Client ID
-3. Add authorized origins: `http://localhost:3000`
-4. Add Client ID to `.env`
-5. Enable in Settings panel (requires consent)
+### Option A – OAuth (recommended, supports multiple calendars)
 
-## 📍 Finding Your Location
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → create a project
+2. Enable the **Google Calendar API**
+3. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID** (Web application)
+4. Add authorized redirect URIs: `http://localhost:5173` (and your production URL)
+5. Copy the Client ID and Client Secret into `.env.local`
+6. In the app: Settings → 📅 Calendars → **Connect Google Account**
+7. After authorizing, click **Sync Calendars** and toggle which ones to show
 
-1. Go to [Google Maps](https://maps.google.com)
-2. Right-click your location
-3. Click coordinates to copy
-4. Add to Settings or `.env`
+### Option B – iCal Feed (simpler, single calendar)
 
-## 🖼️ Adding Photos
+1. Open Google Calendar → Settings → your calendar → **Integrate calendar**
+2. Copy the **Secret address in iCal format** URL
+3. Paste it as `GCAL_ICAL_URL=` in `.env.local` (no `VITE_` prefix)
+4. Restart the dev server – the calendar widget will populate automatically
 
-Place photos in `app/src/assets/photos/` then rebuild:
+## Adding Photos
+
+**Browser upload (easiest):** Settings → 🖼️ Photos → drag-and-drop or click to upload.
+
+Photos land in `app/public/uploads/` and appear in the slideshow immediately.
+
+## To-Do Lists
+
+Settings → ✅ To-Do:
+- **Add list** – creates a column on the dashboard (one per person works well)
+- **Add items** to each list
+- On the dashboard, check off items; they disappear automatically after 10 minutes
+- Drag the **⠿** handle to reorder columns on the dashboard or in the admin panel
+
+## Common Commands
+
 ```bash
-docker-compose down
-docker-compose build
+# Start dev server
+npm run dev
+
+# Type-check and build
+npm run build
+
+# Preview production build locally
+npm run preview
+
+# Docker
 docker-compose up -d
-```
-
-## 🎯 Common Commands
-
-```bash
-# Start
-docker-compose up -d
-
-# Stop
-docker-compose down
-
-# View logs
 docker-compose logs -f
-
-# Restart
-docker-compose restart
-
-# Rebuild after changes
-docker-compose build --no-cache
-docker-compose up -d
-
-# Update to latest
-git pull
 docker-compose down
-docker-compose build
-docker-compose up -d
+docker-compose build --no-cache && docker-compose up -d
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### Dashboard won't load
-```bash
-docker-compose logs -f
-# Check for errors
-```
+| Symptom | Fix |
+|---------|-----|
+| Weather shows wrong city | Enter ZIP code in Settings → ⚙️ Settings |
+| Calendar empty | Connect Google account in Settings → 📅 Calendars, or set `GCAL_ICAL_URL` in `.env.local` |
+| Photos not showing | Upload via Settings → 🖼️ Photos, or copy files to `app/public/uploads/` |
+| Settings reset on reload | Ensure browser allows `localStorage` (not in private mode) |
+| OAuth redirect fails | Check the redirect URI in Google Cloud Console matches your dev URL exactly |
 
-### Calendar not showing
-- Verify API key in Settings
-- Check calendar ID is correct
-- Ensure Google Calendar API is enabled
-
-### Weather not loading
-- Check lat/lon coordinates
-- Verify internet connection
-
-### Photos not appearing
-- Ensure photos are in `app/src/assets/photos/`
-- Rebuild Docker image
-- Check browser console for errors
-
-## 📱 Full Screen Mode
-
-- Press `F11` in browser
-- Or use browser's full-screen option
-- For kiosk mode, see [DEPLOYMENT.md](DEPLOYMENT.md)
-
-## 🎨 Customization
-
-All settings are in the Settings panel:
-- Weather location
-- Calendar settings
-- Photo slideshow timing
-- Todo lists
-
-## 📚 More Help
-
-- [README.md](README.md) - Full overview
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment options
-- [DEVELOPMENT.md](DEVELOPMENT.md) - Development guide
-- [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute
-
-## 💡 Tips
-
-- Use a public/shared Google Calendar for family events
-- Add photos regularly to keep slideshow fresh
-- Set browser to auto-start on boot for dedicated displays
-- Use landscape orientation for best layout
-- Disable screen sleep for always-on displays
-
-## 🎉 You're Done!
-
-Your family dashboard is ready. Enjoy! 🏠
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more detail.

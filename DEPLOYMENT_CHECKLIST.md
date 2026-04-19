@@ -12,17 +12,15 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 - [ ] 512MB+ free RAM
 - [ ] Internet connection
 
-### API Keys (Optional but Recommended)
-- [ ] Google Calendar API key obtained
-- [ ] Google Calendar ID identified
-- [ ] (Optional) Google Photos OAuth Client ID
-- [ ] (Optional) Google Photos Album ID
-- [ ] Location coordinates (lat/lon) found
+### Calendar (Optional but Recommended)
+- [ ] Decided on calendar method: OAuth, iCal feed, or JSON API key
+- [ ] If OAuth: Google Cloud project created, Calendar API enabled, OAuth 2.0 client ID + secret obtained
+- [ ] If iCal: secret iCal URL copied from Google Calendar settings
+- [ ] If JSON API: API key and calendar ID obtained
 
 ### Photos (Optional)
-- [ ] Photos collected and organized
-- [ ] Photos in supported formats (JPG, PNG, etc.)
-- [ ] Photos ready to copy to `app/src/assets/photos/`
+- [ ] Photos collected and in supported formats (JPG, PNG, GIF, WEBP, AVIF)
+- [ ] Will upload via browser after launch (Settings → 🖼️ Photos)
 
 ## ☑️ Initial Setup
 
@@ -31,17 +29,13 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 - [ ] Changed to project directory: `cd fam-bam-dash`
 
 ### Configuration
-- [ ] `.env` file created from `.env.example`
-- [ ] Location coordinates added to `.env`
-- [ ] Google Calendar API key added (if using)
-- [ ] Google Calendar ID added (if using)
-- [ ] Google Photos credentials added (if using)
+- [ ] `app/.env.local` file created
+- [ ] `VITE_LAT` / `VITE_LON` set as fallback coordinates (optional — can use ZIP code in-app instead)
+- [ ] `VITE_GOOGLE_CLIENT_ID` set (if using OAuth calendar)
+- [ ] `GOOGLE_CLIENT_SECRET` set without `VITE_` prefix (if using OAuth calendar)
+- [ ] `GCAL_ICAL_URL` set without `VITE_` prefix (if using iCal feed)
+- [ ] `VITE_GCAL_API_KEY` + `VITE_GCAL_CALENDAR_ID` set (if using JSON API fallback)
 - [ ] Port configured in `docker-compose.yml` (if not using 3000)
-
-### Photos (if using local photos)
-- [ ] Photos copied to `app/src/assets/photos/`
-- [ ] Photos organized in subdirectories (optional)
-- [ ] Verified file formats are supported
 
 ## ☑️ Build & Deploy
 
@@ -68,10 +62,13 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 ## ☑️ Configuration Testing
 
 ### Settings Panel
-- [ ] Settings button works
-- [ ] Can update location coordinates
-- [ ] Can update calendar settings
-- [ ] Can update slideshow settings
+- [ ] Settings button (⚙️ bottom-right) opens panel
+- [ ] ⚙️ Settings tab: ZIP code lookup resolves city/state
+- [ ] ⚙️ Settings tab: Units toggle (°F/mph or °C/km/h) works
+- [ ] 📅 Calendars tab: OAuth connect flow completes (if configured)
+- [ ] 📅 Calendars tab: Calendar toggle saves and takes effect
+- [ ] 🖼️ Photos tab: Photo upload works; photos appear in slideshow
+- [ ] ✅ To-Do tab: Can add lists and items
 - [ ] Settings persist after page reload
 - [ ] Can export settings as JSON
 - [ ] Can reset to defaults
@@ -97,23 +94,23 @@ Use this checklist to ensure a smooth deployment of Fam Bam Dash.
 - [ ] Google Photos load (if configured)
 
 ### Todo Widget
-- [ ] Can add new tasks
-- [ ] Can check off tasks
-- [ ] Can delete tasks
-- [ ] Can create new lists
-- [ ] Can switch between lists
-- [ ] Can delete lists
-- [ ] Can clear completed tasks
+- [ ] Lists created in Settings → ✅ To-Do appear as columns
+- [ ] Can check off items; checked items show countdown badge
+- [ ] Checked items auto-remove after 10 minutes
+- [ ] Unchecking before 10 minutes restores the item
+- [ ] Drag ⠿ handle reorders columns
 - [ ] Tasks persist after page reload
 
 ## ☑️ Display Setup
 
 ### Browser Configuration
+- [ ] Display rotated to **portrait** orientation
 - [ ] Browser set to full-screen (F11)
 - [ ] Bookmarked for easy access
 - [ ] Auto-start configured (if desired)
 - [ ] Screen sleep disabled
 - [ ] Screen brightness adjusted
+- [ ] Dark or light mode selected (☀/☾ button bottom-left)
 
 ### Device Configuration
 - [ ] Device positioned properly

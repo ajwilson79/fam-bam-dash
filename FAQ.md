@@ -1,268 +1,126 @@
-# Frequently Asked Questions (FAQ)
+# Frequently Asked Questions
 
-## General Questions
+## General
 
 ### What is Fam Bam Dash?
-Fam Bam Dash is a self-hosted family dashboard that displays useful information like calendar events, weather, photos, and to-do lists. It's designed for wall-mounted tablets, smart displays, or any always-on screen in your home.
+A self-hosted family dashboard that displays calendar events, weather, photos, and to-do lists on a wall-mounted display. Built with React/TypeScript, optimized for portrait-oriented screens.
 
 ### Is it free?
-Yes! Fam Bam Dash is completely free and open source. The only costs are for hosting (if you use cloud services) and optional API usage (Google Calendar/Photos are free for personal use).
+Yes. All APIs it uses are free for personal use (Open-Meteo for weather, Zippopotam.us for ZIP lookup, Google Calendar API free tier).
 
 ### Do I need coding experience?
-No! If you can follow instructions to run Docker commands, you can set this up. The setup scripts make it even easier.
+No coding experience is required to run it. If you can run `npm install && npm run dev` or `docker-compose up`, you're good.
 
 ### What devices can I use?
-- Raspberry Pi (any model with network)
-- Old tablets (Android/iPad)
-- Dedicated smart displays
-- Old laptops/computers
-- Any device with a web browser
+Any device with a modern browser: Raspberry Pi, old tablet, wall-mounted TV, laptop. Portrait orientation works best.
 
 ## Setup & Installation
 
 ### Do I need a server?
-You need something to run Docker on. This can be:
-- Your home server (Unraid, TrueNAS, etc.)
-- Raspberry Pi
-- Your main computer
-- Cloud server (DigitalOcean, AWS, etc.)
+For local use: just Node.js on your machine. For always-on display: a home server (Unraid, TrueNAS, Raspberry Pi, etc.) running Node.js or Docker.
 
 ### Can I run it without Docker?
-Yes! See [DEVELOPMENT.md](DEVELOPMENT.md) for running locally with Node.js. However, Docker is recommended for easier deployment.
+Yes. `cd app && npm install && npm run dev` is all you need for development. See [DEVELOPMENT.md](DEVELOPMENT.md).
 
-### How much storage does it need?
-- Docker image: ~50MB
-- With photos: Depends on your photo collection
-- Recommended: 500MB+ free space
+### What port does it run on?
+Dev server: `http://localhost:5173` (default Vite port).
+Docker: `http://localhost:3000`.
 
-### How much RAM does it need?
-Very little! The app runs in a browser and the Docker container uses minimal resources:
-- Minimum: 256MB RAM
-- Recommended: 512MB+ RAM
+## Weather
 
-## API Keys & Configuration
+### How do I set my location?
+Open Settings (⚙️ bottom-right) → ⚙️ Settings tab → enter your US ZIP code → click **Look up**. The app resolves it to coordinates automatically and shows the city/state as confirmation.
 
-### Do I need Google API keys?
-- Calendar: Yes, if you want calendar integration
-- Photos: No, you can use local photos only
-- Weather: No, uses free Open-Meteo API
+### Can I use coordinates instead of a ZIP?
+Yes. In the Settings weather section, expand **Manual coordinates (advanced)** to enter latitude/longitude directly.
 
-### Are the API keys free?
-Yes! Google Calendar and Photos APIs are free for personal use within reasonable limits.
+### Can I switch between Fahrenheit and Celsius?
+Yes. Settings → ⚙️ Settings → Units: choose **°F / mph** or **°C / km/h**. The weather widget reloads immediately.
 
-### How do I get a Google Calendar API key?
-See [QUICKSTART.md](QUICKSTART.md#getting-api-keys) for step-by-step instructions.
+### What weather API does it use?
+[Open-Meteo](https://open-meteo.com/) — free, no API key required.
 
-### Can I use multiple calendars?
-Currently, one calendar at a time. You can change it in Settings. Future versions may support multiple calendars.
+## Calendar
 
-### Where do I find my calendar ID?
-Usually it's your Gmail address (e.g., `yourname@gmail.com`). For shared calendars, go to Calendar Settings → Integrate Calendar → Calendar ID.
+### How do I connect my Google Calendar?
+Settings → 📅 Calendars → **Connect Google Account**. This uses Google OAuth; you'll be redirected to Google to authorize access, then returned to the dashboard.
 
-## Features & Usage
+Requires `VITE_GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env.local`. See [QUICKSTART.md](QUICKSTART.md) for setup steps.
 
-### Can I customize the layout?
-Currently, the layout is fixed but responsive. Future versions will support drag-and-drop customization. You can modify the code if you're comfortable with React.
+### Can I show multiple calendars?
+Yes. You can connect multiple Google accounts, and for each account you can toggle individual calendars on or off from the 📅 Calendars tab.
 
-### Can I add more widgets?
-Yes! See [CONTRIBUTING.md](CONTRIBUTING.md) for how to create custom widgets. Ideas: news, stocks, traffic, smart home controls.
+### I don't want to set up OAuth. Can I still show my calendar?
+Yes. Add your Google Calendar's **secret iCal URL** as `GCAL_ICAL_URL` in `.env.local`. The dev server proxies it server-side so there are no CORS issues. Find the URL in Google Calendar → Settings → your calendar → Integrate calendar → "Secret address in iCal format".
 
-### How often does data refresh?
-- Clock: Every second
-- Weather: Every 15 minutes
-- Calendar: Every 15 minutes
-- Photos: Based on slideshow interval (default 12 seconds)
-- Todo: Instant (saved to localStorage)
-
-### Can I use it offline?
-Partially. Todo lists work offline. Weather and Calendar require internet. Future versions may add offline support with service workers.
-
-### Does it work on mobile?
-Yes! The UI is responsive and works on phones/tablets. However, it's optimized for larger screens (tablets, monitors).
+### How often does the calendar refresh?
+Every 15 minutes by default. Configurable in Settings → ⚙️ Settings (future option; currently set via `refreshIntervalMs` in exported settings JSON).
 
 ## Photos
 
-### Where do I put my photos?
-Place them in `app/src/assets/photos/` directory. You can organize them in subfolders.
+### How do I add photos?
+Open Settings → 🖼️ Photos and drag-and-drop image files or click to browse. Photos are uploaded to `app/public/uploads/` and appear in the slideshow immediately — no restart required.
 
-### What photo formats are supported?
-JPG, JPEG, PNG, GIF, WEBP, AVIF
+### Can I delete uploaded photos?
+Yes. In Settings → 🖼️ Photos, hover over any photo thumbnail and click the **×** button.
 
-### How do I add photos after deployment?
-1. Add photos to `app/src/assets/photos/`
-2. Rebuild: `docker-compose build`
-3. Restart: `docker-compose up -d`
+### What formats are supported?
+JPG, JPEG, PNG, GIF, WEBP, AVIF.
+
+### Why do photos have a blurred background?
+The slideshow uses `object-contain` to show the full image without cropping. The blurred backdrop fills the letterbox areas so the panel looks full rather than having black bars.
 
 ### Can I use Google Photos?
-Yes! Set up OAuth credentials and enable in Settings. See [DEPLOYMENT.md](DEPLOYMENT.md) for setup instructions.
+Yes, if `VITE_GOOGLE_PHOTOS_ALBUM_ID` is set in `.env.local`. The slideshow merges uploaded photos and Google Photos album photos.
 
-### How many photos can I add?
-No hard limit, but keep it reasonable (100-500 photos). Too many may slow down the build process.
+## To-Do Lists
 
-## Deployment
+### How do I set up to-do lists?
+Settings → ✅ To-Do → **Add list**. Create one list per person (e.g., "Mom", "Dad", "Kids"). Add items to each list.
 
-### Can I access it from outside my home?
-Yes, but you'll need to:
-1. Set up port forwarding on your router
-2. Use a reverse proxy with HTTPS (recommended)
-3. Consider security implications
+### How do the checkboxes work?
+Check an item on the dashboard to mark it done. It stays visible for **10 minutes** so you can uncheck it if it was checked accidentally. After 10 minutes it's removed automatically.
 
-### How do I use HTTPS?
-Use a reverse proxy like Nginx or Caddy. See [DEPLOYMENT.md](DEPLOYMENT.md#reverse-proxy-example-nginx) for examples.
+### Can I reorder the lists?
+Yes. On the dashboard, drag the **⠿** handle on a list column to move it. You can also reorder them in Settings → ✅ To-Do using the same drag handle.
 
-### Can I run multiple instances?
-Yes! Just change the port in `docker-compose.yml`:
-```yaml
-ports:
-  - "3001:80"  # Second instance
-```
+## Appearance
 
-### How do I update to the latest version?
-```bash
-git pull
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
-```
+### How do I toggle dark/light mode?
+Click the **☀ / ☾** floating button in the bottom-left corner of the dashboard.
 
-## Troubleshooting
-
-### Dashboard shows blank screen
-1. Check browser console for errors (F12)
-2. Check Docker logs: `docker-compose logs -f`
-3. Verify port 3000 is not in use
-4. Try rebuilding: `docker-compose build --no-cache`
-
-### Calendar shows "Calendar failed"
-- Verify API key is correct
-- Check calendar ID is correct
-- Ensure Google Calendar API is enabled
-- Check browser console for specific error
-
-### Weather not loading
-- Verify lat/lon coordinates are correct
-- Check internet connection
-- Open-Meteo API might be down (rare)
-
-### Photos not showing
-- Ensure photos are in correct directory
-- Rebuild Docker image after adding photos
-- Check file formats are supported
-- Look for errors in browser console
-
-### Settings not saving
-- Check browser localStorage is enabled
-- Try different browser
-- Check browser console for errors
-
-### Docker build fails
-- Ensure Docker is running
-- Check disk space
-- Try: `docker system prune` to free space
-- Check Docker logs for specific error
-
-## Performance
-
-### Why is the dashboard slow?
-- Too many photos (optimize/reduce)
-- Slow internet (affects weather/calendar)
-- Underpowered device (upgrade RAM)
-- Browser issues (try different browser)
-
-### How can I improve performance?
-- Reduce photo count
-- Increase refresh intervals
-- Use local photos instead of Google Photos
-- Close other browser tabs
-- Restart the container
-
-### Does it use a lot of bandwidth?
-No! After initial load:
-- Weather: ~10KB every 15 minutes
-- Calendar: ~5KB every 15 minutes
-- Photos: Only when loading new ones
-- Total: <1MB per hour
+### Is the layout customizable?
+The current layout is a fixed two-column portrait grid. The left column shows the clock and weather; the right column shows photos, calendar, and to-do. To change the layout, edit `App.tsx` and `index.css`.
 
 ## Privacy & Security
 
-### Is my data private?
-Yes! Everything runs locally. Your data never leaves your network except:
-- Weather API calls (location only)
-- Google Calendar API calls (if enabled)
-- Google Photos API calls (if enabled)
+### Where is my data stored?
+Settings and to-do lists are in your browser's `localStorage`. Uploaded photos are in `app/public/uploads/` on the server. Nothing is sent to any third-party service except:
+- Weather coordinates → Open-Meteo
+- ZIP code → Zippopotam.us
+- OAuth tokens → Google (if calendar is connected)
 
-### Are API keys secure?
-API keys are embedded in the built app. For public-facing deployments:
-- Use API key restrictions in Google Cloud Console
-- Implement authentication
-- Use HTTPS
+### Are my API keys secure?
+`GOOGLE_CLIENT_SECRET` and `GCAL_ICAL_URL` use environment variable names **without** the `VITE_` prefix, so Vite never bundles them into the browser build. They only exist in the Node.js server process.
 
-### Can others see my calendar?
-Only if they can access your dashboard. Secure your network and consider authentication for public access.
+`VITE_GOOGLE_CLIENT_ID` is intentionally public (it's the OAuth client ID, not secret).
 
-## Customization
+### Can others access my dashboard?
+If you run it on your home network and don't expose the port externally, only devices on your LAN can reach it. For public-facing deployments, add authentication via a reverse proxy.
 
-### Can I change the colors?
-Yes! Edit `app/src/index.css` and component files. The app uses Tailwind CSS. Future versions may have theme support.
+## Performance
 
-### Can I change the font?
-Yes! Add your font to `app/index.html` and update CSS. See Tailwind documentation for font configuration.
+### How much bandwidth does it use?
+After initial load:
+- Weather: ~15 KB every 15 minutes
+- Calendar (iCal): ~50–200 KB every 15 minutes
+- Photos: loaded once and cached
 
-### Can I hide widgets I don't use?
-Currently, you'd need to edit `app/src/App.tsx` to remove widgets. Future versions may have toggle options.
-
-### Can I change the layout?
-Yes, by editing `app/src/App.tsx`. The layout uses CSS Grid. Requires React/CSS knowledge.
-
-## Support
-
-### Where can I get help?
-1. Check this FAQ
-2. Read the documentation (README, DEPLOYMENT, DEVELOPMENT)
-3. Search existing GitHub issues
-4. Open a new GitHub issue
-5. Join discussions on GitHub
-
-### How do I report a bug?
-Open a GitHub issue with:
-- Clear description
-- Steps to reproduce
-- Expected vs actual behavior
-- Screenshots if applicable
-- Browser/OS information
-- Console errors
-
-### How do I request a feature?
-Open a GitHub issue with:
-- Feature description
-- Use case explanation
-- Examples or mockups
-- Why it would be useful
-
-### Can I contribute?
-Absolutely! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. All contributions welcome!
-
-## Future Plans
-
-### What features are planned?
-- More widgets (news, stocks, traffic, etc.)
-- Drag-and-drop layout customization
-- Theme support
-- Multi-language support
-- Mobile app version
-- Offline support
-- Voice control
-- Smart home integration
-
-### When will feature X be added?
-This is an open-source project. Features are added as time permits. Contributions are welcome!
-
-### Can I sponsor development?
-Not currently set up, but may be added in the future. Best way to help is to contribute code or documentation!
+### How can I improve performance?
+- Increase the slideshow interval (Settings → ⚙️ Settings → Interval)
+- Reduce the number of uploaded photos
+- Increase calendar/weather refresh intervals via exported settings JSON
 
 ## Still Have Questions?
 
-- Check the [documentation](README.md)
-- Search [GitHub issues](https://github.com/your-repo/issues)
-- Open a [new issue](https://github.com/your-repo/issues/new)
-- Start a [discussion](https://github.com/your-repo/discussions)
+Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) or open a GitHub issue.

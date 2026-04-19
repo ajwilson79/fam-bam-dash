@@ -1,260 +1,189 @@
 # Development Guide
 
-## 🛠️ Setup
+## Prerequisites
 
-### Prerequisites
-- Node.js 20+ 
-- npm or yarn
+- Node.js 20+
+- npm
 - Git
 
-### Local Development
+## Local Setup
 
-1. Clone the repository:
 ```bash
 git clone <your-repo-url>
 cd fam-bam-dash/app
-```
-
-2. Install dependencies:
-```bash
 npm install
-```
-
-3. Create environment file:
-```bash
-cp .env.example .env
-# Edit .env with your API keys
-```
-
-4. Start development server:
-```bash
+cp .env.local.example .env.local   # fill in your values
 npm run dev
+# Open http://localhost:5173
 ```
 
-5. Open `http://localhost:5173` in your browser
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 fam-bam-dash/
-├── app/                      # React application
+├── app/
+│   ├── public/
+│   │   └── uploads/          # Uploaded photos (served at /uploads/)
 │   ├── src/
 │   │   ├── assets/
-│   │   │   └── photos/      # Local photos for slideshow
-│   │   ├── lib/             # Core logic & API clients
-│   │   │   ├── settings.ts  # Settings management
-│   │   │   ├── weather.ts   # Weather API
-│   │   │   ├── gcal.ts      # Google Calendar API
-│   │   │   ├── photos.ts    # Photo loading & Google Photos
-│   │   │   └── todo.ts      # Todo list logic
-│   │   ├── widgets/         # UI components
-│   │   │   ├── Clock.tsx
-│   │   │   ├── Weather.tsx
-│   │   │   ├── Calendar.tsx
-│   │   │   ├── Todo.tsx
-│   │   │   ├── PhotoSlideshow.tsx
-│   │   │   └── SettingsPanel.tsx
-│   │   ├── App.tsx          # Main app layout
-│   │   ├── main.tsx         # Entry point
-│   │   └── index.css        # Global styles
+│   │   │   └── photos/       # Bundled photos (imported at build time)
+│   │   ├── lib/              # Business logic
+│   │   │   ├── settings.ts   # Settings type, localStorage persistence, pub/sub
+│   │   │   ├── weather.ts    # Open-Meteo fetch, ZIP→lat/lon lookup, icon mapping
+│   │   │   ├── gcal.ts       # Calendar priority chain (OAuth → iCal → JSON API)
+│   │   │   ├── gapi.ts       # Google Calendar REST API calls (OAuth)
+│   │   │   ├── oauth.ts      # Google OAuth 2.0 PKCE flow, token storage
+│   │   │   ├── ical.ts       # iCal parser (no external library)
+│   │   │   ├── photos.ts     # Photo loading (bundled + uploaded + Google Photos)
+│   │   │   ├── todo.ts       # Todo state, pub/sub, auto-remove, drag reorder
+│   │   │   ├── retry.ts      # withRetry() helper for fetch calls
+│   │   │   └── utils.ts      # debounce and other shared utilities
+│   │   ├── widgets/          # React components
+│   │   │   ├── Clock.tsx           # Real-time clock and date
+│   │   │   ├── Weather.tsx         # Current conditions + 5-day forecast
+│   │   │   ├── Calendar.tsx        # Upcoming calendar events
+│   │   │   ├── TodoPanel.tsx       # Dashboard to-do columns
+│   │   │   ├── PhotoSlideshow.tsx  # Full-image slideshow with blur backdrop
+│   │   │   ├── SettingsPanel.tsx   # 4-tab settings modal
+│   │   │   ├── CalendarAdmin.tsx   # OAuth connect + calendar toggle UI
+│   │   │   ├── PhotoUpload.tsx     # Drag-and-drop photo upload UI
+│   │   │   └── TodoAdmin.tsx       # Add/rename/delete lists and items
+│   │   ├── App.tsx           # Root layout, theme, OAuth callback handling
+│   │   ├── main.tsx          # React entry point
+│   │   └── index.css         # All CSS (layout grid, widget styles, themes)
 │   ├── package.json
-│   └── vite.config.ts
-├── Dockerfile               # Docker build config
-├── docker-compose.yml       # Docker compose config
-├── nginx.conf              # Nginx config for production
+│   ├── vite.config.ts        # Vite + three server-side plugins (photos, iCal, OAuth)
+│   ├── tsconfig.app.json
+│   └── tsconfig.node.json    # includes "types": ["node"] for vite plugins
+├── Dockerfile
+├── docker-compose.yml
+├── nginx.conf
 └── README.md
 ```
 
-## 🎨 Styling
+## Vite Server Plugins
 
-The app uses Tailwind CSS 4 for styling. Key design tokens:
+`vite.config.ts` registers three middleware plugins that run during `npm run dev` (and are needed for production if you run the Vite preview server). For static hosting (e.g., Nginx serving the `dist/` build), you need a separate Node.js backend to handle these routes.
 
-- Background: `bg-slate-900` (dark)
-- Cards: `bg-slate-800`
-- Accents: `bg-slate-700`
-- Primary: `bg-sky-600`
-- Text: `text-white`, `text-slate-300`, `text-slate-400`
+| Route | Plugin | Purpose |
+|-------|--------|---------|
+| `POST /api/photos/upload?name=file.jpg` | `photosPlugin` | Saves binary body to `public/uploads/` |
+| `GET /api/photos/list` | `photosPlugin` | Returns JSON array of uploaded filenames |
+| `DELETE /api/photos/delete?name=file.jpg` | `photosPlugin` | Deletes file from `public/uploads/` |
+| `GET /api/ical` | `icalProxyPlugin` | Fetches `GCAL_ICAL_URL` server-side (avoids browser CORS) |
+| `POST /api/auth/token` | `oauthPlugin` | Exchanges OAuth code for tokens using `GOOGLE_CLIENT_SECRET` |
+| `POST /api/auth/refresh` | `oauthPlugin` | Refreshes an OAuth access token |
 
-### Touch-Friendly Design
+The OAuth endpoints use `node:https` directly (no `node-fetch`) so they work without extra dependencies.
 
-All interactive elements use:
-- `touch-manipulation` class for better touch response
-- Minimum 44x44px touch targets
-- Clear hover/active states
-- Generous padding and spacing
+## State Management
 
-## 🔌 API Integration
-
-### Weather (Open-Meteo)
-
-Free API, no key required. See `lib/weather.ts`:
-- Current weather
-- 5-day forecast
-- Auto timezone detection
-
-### Google Calendar
-
-Requires API key. See `lib/gcal.ts`:
-- Fetches upcoming events
-- Configurable time window
-- Formats event times
-
-### Google Photos (Optional)
-
-Requires OAuth. See `lib/photos.ts`:
-- OAuth 2.0 flow with Google Identity Services
-- Fetches album photos
-- Combines with local photos
-
-## 💾 State Management
-
-### Settings
+### Settings (`lib/settings.ts`)
+- Type: `Settings` – weather, calendar, slideshow, theme
 - Stored in `localStorage` under `fam-bam-settings`
-- Simple pub/sub for cross-component updates
-- Defaults from environment variables
+- Pub/sub: `subscribeSettings(fn)` / `setSettings(s)` – all widgets re-render on change
+- Validation: `validateSettings()` clamps values to safe ranges on load
 
-### Todo Lists
+### Todo (`lib/todo.ts`)
+- Type: `TodoState` – `{ lists: TodoList[] }`, each list has `{ id, name, items[] }`
+- Each item: `{ id, text, done, updatedAt, checkedAt? }`
 - Stored in `localStorage` under `fam-bam-todo`
-- Immutable state updates
-- Multiple lists support
+- Pub/sub: `subscribeTodo(fn)` / `saveState(s)` – keeps dashboard and admin in sync
+- `toggleItem()` sets `checkedAt` when checked; `autoRemoveExpired()` removes items where `Date.now() - checkedAt > 10 min`
+- `reorderLists()` is pure (no mutation)
 
-## 🧪 Testing
+### OAuth Tokens (`lib/oauth.ts`)
+- Stored in `localStorage` under `fam-bam-gcal-accounts`
+- PKCE flow: `startOAuthFlow()` generates code verifier/challenge; `handleOAuthCallback()` exchanges code via `/api/auth/token`
+- `getValidToken(account)` auto-refreshes if the access token is within 5 minutes of expiry
 
-```bash
-# Run linter
-npm run lint
+## Calendar Data Flow
 
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
+```
+gcal.ts fetchEvents()
+  1. Load OAuth accounts from localStorage
+     → gapi.ts fetchAllOAuthEvents() → Google Calendar REST API
+  2. If no OAuth accounts: fetch /api/ical
+     → ical.ts parseIcal() → parse and filter events
+  3. If iCal fails: Google Calendar JSON API (VITE_GCAL_API_KEY)
 ```
 
-## 🐳 Docker Development
+## Photo Data Flow
 
-Build and test Docker image locally:
-
-```bash
-# Build
-docker build -t fam-bam-dash .
-
-# Run
-docker run -p 3000:80 fam-bam-dash
-
-# With environment variables
-docker run -p 3000:80 \
-  -e VITE_LAT=37.7749 \
-  -e VITE_LON=-122.4194 \
-  fam-bam-dash
+```
+photos.ts loadAllPhotos()
+  1. import.meta.glob('./assets/photos/*')  – bundled at build time
+  2. GET /api/photos/list                   – uploaded at runtime
+  3. Google Photos API (if VITE_GOOGLE_PHOTOS_ALBUM_ID set)
 ```
 
-## 📝 Adding New Widgets
+The slideshow listens for a `photos-changed` custom DOM event dispatched by `notifyPhotosChanged()` after any upload or delete.
 
-1. Create a new component in `src/widgets/`:
-```tsx
-import { useEffect, useState } from 'react'
+## Theming
 
-export default function MyWidget() {
-  const [data, setData] = useState(null)
-  
-  useEffect(() => {
-    // Fetch data
-  }, [])
-  
-  return (
-    <div className="w-full h-full">
-      {/* Your widget UI */}
-    </div>
-  )
+CSS custom properties are set on `:root` or `.theme-light` in `index.css`:
+
+```css
+:root {                          /* dark (default) */
+  --bg: #0f172a;
+  --color-card: #1e293b;
+  --color-elevated: #334155;
+  --color-accent: #38bdf8;
+  --color-text: #f1f5f9;
+  --color-muted: #94a3b8;
+}
+.theme-light { ... }
+```
+
+The theme class is toggled on `document.documentElement` from `App.tsx`. Tailwind classes like `bg-theme-card` map to `var(--color-card)` via the `@theme` block.
+
+## Portrait Layout
+
+The root grid in `index.css`:
+
+```css
+.dash-root {
+  display: grid;
+  grid-template-columns: 30% 70%;
+  height: 100dvh;
+}
+.dash-right {
+  display: grid;
+  grid-template-rows: 44vh 17vh 1fr;
 }
 ```
 
-2. Add to `App.tsx`:
-```tsx
-import MyWidget from './widgets/MyWidget'
+Left column: clock + weather. Right column top: photo slideshow; middle: calendar header; bottom: to-do panel.
 
-// In the grid layout:
-<div className="bg-slate-800 rounded-xl p-6">
-  <MyWidget />
-</div>
-```
+Font sizes use `clamp(..., min(Xvw, Xvh), ...)` so the UI scales correctly on both landscape and portrait screens without reflow.
 
-3. (Optional) Add settings in `lib/settings.ts` and `widgets/SettingsPanel.tsx`
+## Adding a New Widget
 
-## 🎯 Best Practices
+1. Create `src/widgets/MyWidget.tsx`
+2. Import and place it in `App.tsx`
+3. If it needs settings, add a field to the `Settings` type in `lib/settings.ts` (remember to add validation in `validateSettings` and a default in `defaultSettings`)
+4. If it needs a settings UI, add a section to `SettingsPanel.tsx`
 
-### Performance
-- Use `React.memo()` for expensive components
-- Implement proper cleanup in `useEffect`
-- Debounce API calls
-- Lazy load images
+## Scripts
 
-### Accessibility
-- Use semantic HTML
-- Include ARIA labels for interactive elements
-- Ensure keyboard navigation works
-- Test with screen readers
-
-### Code Style
-- Use TypeScript for type safety
-- Keep components small and focused
-- Extract reusable logic to `lib/`
-- Use meaningful variable names
-- Add comments for complex logic
-
-## 🔄 Release Process
-
-1. Update version in `package.json`
-2. Test locally:
 ```bash
-npm run build
-npm run preview
+npm run dev       # Vite dev server with HMR
+npm run build     # tsc + vite build → dist/
+npm run preview   # Serve dist/ locally
+npm run lint      # ESLint
 ```
 
-3. Test Docker build:
-```bash
-docker-compose build
-docker-compose up
-```
+## Environment Variables Reference
 
-4. Commit and tag:
-```bash
-git add .
-git commit -m "Release v1.0.0"
-git tag v1.0.0
-git push origin main --tags
-```
+| Variable | Where used | Required |
+|----------|-----------|----------|
+| `VITE_LAT` / `VITE_LON` | Fallback weather coordinates | No |
+| `VITE_GCAL_API_KEY` | Google Calendar JSON API | No |
+| `VITE_GCAL_CALENDAR_ID` | Default calendar for JSON API | No |
+| `VITE_GOOGLE_CLIENT_ID` | OAuth client ID (browser) | For OAuth |
+| `GOOGLE_CLIENT_SECRET` | OAuth token exchange (server) | For OAuth |
+| `GCAL_ICAL_URL` | iCal feed URL (server-side proxy) | No |
+| `VITE_GOOGLE_PHOTOS_ALBUM_ID` | Google Photos album | No |
+| `VITE_TIMEZONE` | Calendar display timezone | No |
 
-5. (Optional) Push to Docker Hub:
-```bash
-docker tag fam-bam-dash your-username/fam-bam-dash:latest
-docker push your-username/fam-bam-dash:latest
-```
-
-## 🐛 Common Issues
-
-### Hot reload not working
-- Check Vite config
-- Restart dev server
-- Clear browser cache
-
-### TypeScript errors
-```bash
-npm run build
-# Fix any type errors shown
-```
-
-### Environment variables not loading
-- Ensure variables start with `VITE_`
-- Restart dev server after changing `.env`
-- Check `import.meta.env.VITE_*` usage
-
-## 📚 Resources
-
-- [React Documentation](https://react.dev/)
-- [Vite Documentation](https://vitejs.dev/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Open-Meteo API](https://open-meteo.com/)
-- [Google Calendar API](https://developers.google.com/calendar)
-- [Google Photos API](https://developers.google.com/photos)
+Variables without `VITE_` prefix are never bundled into the browser build.
