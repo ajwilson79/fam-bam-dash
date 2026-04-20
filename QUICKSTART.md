@@ -30,6 +30,7 @@ Once the app is open:
 2. Go to the **⚙️ Settings** tab:
    - Enter your **ZIP code** and click **Look up** – the app resolves it to coordinates and shows the city name
    - Choose **°F / mph** or **°C / km/h** under Units
+   - Under **💤 Screensaver**, enable picture frame mode and set your preferred idle timeout (default 5 minutes)
 3. Go to the **📅 Calendars** tab to connect a Google account (requires OAuth setup – see below)
 4. Go to the **🖼️ Photos** tab to upload family photos directly from the browser
 5. Go to the **✅ To-Do** tab to create lists for each family member
@@ -115,6 +116,8 @@ docker-compose build --no-cache && docker-compose up -d
 | Weather shows wrong city | Enter ZIP code in Settings → ⚙️ Settings |
 | Calendar empty | Connect Google account in Settings → 📅 Calendars, or set `GCAL_ICAL_URL` in `.env.local` |
 | Photos not showing | Upload via Settings → 🖼️ Photos, or copy files to `app/public/uploads/` |
+| Screensaver won't dismiss | Move the mouse, click, tap the screen, or press any key |
+| Screensaver never activates | Check Settings → ⚙️ Settings → 💤 Screensaver — make sure it's enabled |
 | Settings reset on reload | Settings are also server-persisted; make sure the server is running |
 | OAuth redirect fails | Check the redirect URI in Google Cloud Console matches `http://localhost:12000` exactly |
 

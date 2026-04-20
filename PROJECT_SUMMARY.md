@@ -12,11 +12,12 @@ A self-hosted family dashboard React app optimized for portrait-oriented wall di
 | **Clock** | Real-time clock and date, portrait-scaled with `clamp(min(vw,vh))` |
 | **Weather** | Current conditions + scrollable 24-hour hourly + 5-day forecast via Open-Meteo; US ZIP code lookup via Zippopotam.us; switchable °F/mph ↔ °C/km/h |
 | **Calendar** | Upcoming events (today + 30 days) from Google Calendar; color-coded by calendar; supports OAuth, iCal proxy, or JSON API fallback |
-| **Photo Slideshow** | `object-contain` full-image display with blurred backdrop fill; in-browser drag-and-drop upload |
+| **Photo Slideshow** | `object-contain` full-image display with blurred backdrop fill; Ken Burns zoom/pan animation; in-browser drag-and-drop upload |
+| **Idle Screensaver** | Fullscreen photo frame after configurable idle timeout (default 5 min); dismissed by any interaction |
 | **To-Do Panel** | Per-person columns, real checkboxes, configurable auto-remove delay, drag-to-reorder |
 
 ### Settings Panel (4 tabs)
-- **⚙️ Settings** – ZIP code weather, units, slideshow interval/shuffle, to-do auto-remove delay, dark/light theme, export JSON
+- **⚙️ Settings** – ZIP code weather, units, slideshow interval/shuffle, screensaver idle timeout, to-do auto-remove delay, dark/light theme
 - **📅 Calendars** – Google OAuth connect, calendar sync, per-calendar toggles
 - **🖼️ Photos** – Drag-and-drop upload, thumbnail grid with delete
 - **✅ To-Do** – Add/rename/delete lists and items, drag-to-reorder, export/import backup
@@ -73,7 +74,7 @@ Browser (React SPA)
 
 ```
 app/src/
-  App.tsx              – root layout, theme toggle, OAuth callback handling
+  App.tsx              – root layout, theme toggle, OAuth callback, idle screensaver overlay
   index.css            – portrait grid, CSS custom properties, all component styles
   lib/
     settings.ts        – Settings type, defaultSettings, validateSettings, pub/sub, server sync

@@ -79,6 +79,25 @@ body {
   overflow: hidden;
 }
 
+/* ── Photo slideshow Ken Burns ── */
+/* Gentle zoom/pan variants. If these don't fire the image is still visible at scale 1. */
+@keyframes kb-1 {
+  0%   { transform: scale(1.00) translate(0%,    0%);   }
+  100% { transform: scale(1.08) translate(-1.5%, -1%);  }
+}
+@keyframes kb-2 {
+  0%   { transform: scale(1.08) translate(1%,    1%);   }
+  100% { transform: scale(1.00) translate(-1%,   0%);   }
+}
+@keyframes kb-3 {
+  0%   { transform: scale(1.00) translate(-1%,   1%);   }
+  100% { transform: scale(1.08) translate(1.5%,  -1%);  }
+}
+@keyframes kb-4 {
+  0%   { transform: scale(1.08) translate(-1.5%, 1%);   }
+  100% { transform: scale(1.00) translate(1%,    -1%);  }
+}
+
 .dash-middle {
   display: grid;
   grid-template-columns: 1fr 1fr;

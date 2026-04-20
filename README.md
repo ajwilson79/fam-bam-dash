@@ -11,7 +11,8 @@ Fam Bam Dash is a customizable, touch-friendly smart home dashboard designed to 
 - **Google Calendar Integration** – Connect one or more Google accounts via OAuth; toggle individual calendars on/off from the Calendars admin tab; events are color-coded by calendar
 - **Real-Time Clock and Date** – Always know what time it is
 - **Weather with US ZIP Code** – Enter a ZIP code and the app resolves it to coordinates automatically; supports °F/mph or °C/km/h; shows current conditions, 24-hour hourly scroll, and 5-day forecast
-- **Photo Slideshow** – Upload photos directly from the browser (drag-and-drop); displays full images with a blurred backdrop fill
+- **Photo Slideshow** – Upload photos directly from the browser (drag-and-drop); displays full images with a blurred backdrop fill and Ken Burns zoom/pan animation
+- **Idle Screensaver / Picture Frame Mode** – After a configurable idle timeout (default 5 minutes), the display switches to a fullscreen photo slideshow; any touch, click, or keypress returns to the dashboard
 - **Interactive To-Do Lists** – Per-person lists with checkboxes; checked items auto-remove after a configurable delay (default 10 minutes)
 - **Live Multi-Screen Sync** – Any change (settings or todos) made on one device instantly reloads all other open screens via Server-Sent Events; the screen that made the change is never disrupted
 - **Dark / Light Mode** – Toggle from the floating button on the dashboard
@@ -45,7 +46,7 @@ Click the gear icon (bottom-right) to open Settings. The panel has four tabs:
 
 | Tab | What you configure |
 |-----|-------------------|
-| ⚙️ Settings | Weather ZIP code, units (°F/mph or °C/km/h), refresh interval, slideshow interval & shuffle, to-do auto-remove delay, dark/light theme |
+| ⚙️ Settings | Weather ZIP code, units (°F/mph or °C/km/h), refresh interval, slideshow interval & shuffle, screensaver idle timeout, to-do auto-remove delay, dark/light theme |
 | 📅 Calendars | Connect Google accounts via OAuth, sync calendar list, toggle individual calendars on/off |
 | 🖼️ Photos | Drag-and-drop photo upload; delete uploaded photos |
 | ✅ To-Do | Add/rename/delete lists and items; drag to reorder lists |

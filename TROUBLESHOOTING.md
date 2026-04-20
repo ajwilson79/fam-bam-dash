@@ -86,6 +86,22 @@ Items auto-remove after the configured delay (default 10 minutes, adjustable in 
 ### Can't drag to reorder lists
 Drag must start from the **⠿ handle** on the left side of each list header, not from the list body.
 
+## Screensaver / Picture Frame Mode
+
+### Screensaver never activates
+1. Open Settings → ⚙️ Settings → 💤 Screensaver and confirm **Enable picture frame mode when idle** is checked
+2. Confirm the timeout value is what you expect (default 5 minutes)
+3. Any mouse movement, click, touch, or keypress resets the timer — make sure the display is truly idle
+
+### Screensaver activates but shows no photos
+Upload photos first: Settings → 🖼️ Photos. The screensaver uses the same library as the dashboard slideshow.
+
+### Screensaver won't dismiss
+Any of the following should wake the dashboard: move the mouse, click anywhere, tap the screen, or press any key. If the page becomes completely unresponsive, a browser refresh (F5) will also reset it.
+
+### Screensaver timeout changed but old timeout is still being used
+The new timeout takes effect on the next interaction that resets the timer. Move the mouse once after saving to start a fresh countdown.
+
 ## Settings
 
 ### Settings reset after reload

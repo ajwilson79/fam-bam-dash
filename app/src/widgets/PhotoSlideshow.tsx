@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchGooglePhotosAlbum, getGooglePhotosToken, loadLocalPhotos, loadUploadedPhotos, shuffle, type PhotoItem } from '../lib/photos'
 import { loadSettings, subscribeSettings } from '../lib/settings'
 
@@ -44,23 +44,36 @@ function useLocalAndGooglePhotos() {
   return { photos, error, loading }
 }
 
-export default function PhotoSlideshow({ intervalMs, fadeMs = 800, shuffleOn }: { intervalMs?: number; fadeMs?: number; shuffleOn?: boolean }) {
+const KB_VARIANTS = ['kb-1', 'kb-2', 'kb-3', 'kb-4']
+
+export default function PhotoSlideshow({ intervalMs, shuffleOn }: {
+  intervalMs?: number
+  shuffleOn?: boolean
+}) {
   const { photos, error, loading } = useLocalAndGooglePhotos()
-  const [index, setIndex] = useState(0)
-  const [ready, setReady] = useState(false)
+  const [idx, setIdx] = useState(0)
+  const listRef = useRef<PhotoItem[]>([])
 
   const s = loadSettings()
-  const effectiveInterval = intervalMs ?? s.slideshow.intervalMs
-  const effectiveShuffle = shuffleOn ?? s.slideshow.shuffle
+  const resolvedInterval = intervalMs ?? s.slideshow.intervalMs
+  const resolvedShuffle = shuffleOn ?? s.slideshow.shuffle
 
-  const list = useMemo(() => (effectiveShuffle ? shuffle(photos) : photos), [photos, effectiveShuffle])
+  const list = useMemo(
+    () => (resolvedShuffle ? shuffle(photos) : photos),
+    [photos, resolvedShuffle]
+  )
+  listRef.current = list
 
   useEffect(() => {
     if (list.length === 0) return
-    setReady(true)
-    const id = setInterval(() => setIndex((i) => (i + 1) % list.length), effectiveInterval)
+    const id = setInterval(() => {
+      setIdx(prev => {
+        const len = listRef.current.length
+        return len === 0 ? 0 : (prev + 1) % len
+      })
+    }, resolvedInterval)
     return () => clearInterval(id)
-  }, [list, effectiveInterval])
+  }, [list, resolvedInterval])
 
   if (error) return (
     <div className="w-full h-full bg-slate-800 rounded-xl flex items-center justify-center">
@@ -72,46 +85,37 @@ export default function PhotoSlideshow({ intervalMs, fadeMs = 800, shuffleOn }: 
     <div className="w-full h-full bg-slate-800 rounded-xl animate-pulse" />
   )
 
-  if (!ready || list.length === 0) return (
+  if (list.length === 0) return (
     <div className="w-full h-full bg-slate-800 rounded-xl flex items-center justify-center">
       <div className="text-slate-400 text-center p-6">
         <div className="text-4xl mb-2">🖼️</div>
-        <div>Add images to src/assets/photos</div>
+        <div>Add images in Settings → Photos</div>
       </div>
     </div>
   )
 
-  const current = list[index]
-  const next = list[(index + 1) % list.length]
+  const safeIdx = idx % list.length
+  const photo = list[safeIdx]
+  const kbVariant = KB_VARIANTS[safeIdx % KB_VARIANTS.length]
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-black" style={{ borderRadius: 0 }}>
-      {/* Blurred backdrop fills any letterbox gaps */}
+    <div className="relative w-full h-full overflow-hidden bg-black">
+      {/* Blurred backdrop fills letterbox areas */}
       <img
-        key={`bg-${current.id}`}
-        src={current.src}
+        src={photo.src}
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 w-full h-full object-cover scale-110 transition-opacity"
-        style={{ filter: 'blur(18px) brightness(0.45)', transitionDuration: `${fadeMs}ms` }}
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ transform: 'scale(1.15)', filter: 'blur(18px) brightness(0.45)' }}
       />
-      {/* Full image, never cropped */}
+      {/* Foreground — full image with Ken Burns zoom/pan. Key restarts animation on change. */}
       <img
-        key={current.id}
-        src={current.src}
+        key={safeIdx}
+        src={photo.src}
         alt=""
-        className="absolute inset-0 w-full h-full object-contain transition-opacity"
-        style={{ transitionDuration: `${fadeMs}ms` }}
+        className="absolute inset-0 w-full h-full object-contain"
+        style={{ animation: `${kbVariant} ${resolvedInterval}ms linear forwards` }}
       />
-      {/* Preload next */}
-      {next && (
-        <img
-          key={`pre-${next.id}`}
-          src={next.src}
-          alt=""
-          className="absolute -z-10 -left-[9999px] -top-[9999px]"
-        />
-      )}
     </div>
   )
 }

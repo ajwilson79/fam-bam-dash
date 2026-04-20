@@ -63,7 +63,7 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-theme-elevated hover:opacity-80 transition-opacity touch-manipulation text-sm"
+            className="px-4 py-2 rounded-lg bg-theme-elevated hover:opacity-80 transition-opacity touch-manipulation text-sm text-theme border border-[var(--color-text-muted)]"
           >
             Close
           </button>
@@ -172,6 +172,26 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
                     <input type="number" min={3000} step={1000} value={s.slideshow.intervalMs}
                       onChange={e => update({ ...s, slideshow: { ...s.slideshow, intervalMs: Number(e.target.value) } })}
                       className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none" />
+                  </label>
+                </div>
+              </section>
+
+              {/* Screensaver */}
+              <section className="bg-theme-elevated rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3">💤 Screensaver</h3>
+                <div className="space-y-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={s.idle.enabled}
+                      onChange={e => update({ ...s, idle: { ...s.idle, enabled: e.target.checked } })}
+                      className="w-5 h-5 cursor-pointer" />
+                    <span>Enable picture frame mode when idle</span>
+                  </label>
+                  <label className="flex flex-col">
+                    <span className="text-sm text-slate-300 mb-1">Idle timeout (minutes)</span>
+                    <input type="number" min={1} max={1440}
+                      value={s.idle.timeoutMinutes}
+                      onChange={e => update({ ...s, idle: { ...s.idle, timeoutMinutes: Math.max(1, Number(e.target.value)) } })}
+                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none w-32" />
                   </label>
                 </div>
               </section>

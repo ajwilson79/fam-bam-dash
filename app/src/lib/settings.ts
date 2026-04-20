@@ -3,6 +3,7 @@ export type Settings = {
   calendar: { calendarId: string; maxEvents: number; refreshIntervalMs: number }
   slideshow: { intervalMs: number; shuffle: boolean; useGooglePhotos: boolean }
   todo: { autoRemoveMinutes: number }
+  idle: { enabled: boolean; timeoutMinutes: number }
   theme: 'dark' | 'light'
 }
 
@@ -35,6 +36,7 @@ export function defaultSettings(): Settings {
     },
     slideshow: { intervalMs: 12000, shuffle: true, useGooglePhotos: !!import.meta.env.VITE_GOOGLE_PHOTOS_ALBUM_ID },
     todo: { autoRemoveMinutes: 10 },
+    idle: { enabled: true, timeoutMinutes: 5 },
     theme: 'dark',
   }
 }
@@ -64,6 +66,7 @@ function validateSettings(raw: unknown): Settings {
   const c = obj(r.calendar)
   const sl = obj(r.slideshow)
   const td = obj(r.todo)
+  const il = obj(r.idle)
   return {
     weather: {
       zip: strOr(w.zip, def.weather.zip),
@@ -84,6 +87,10 @@ function validateSettings(raw: unknown): Settings {
     },
     todo: {
       autoRemoveMinutes: Math.round(num(td.autoRemoveMinutes, def.todo.autoRemoveMinutes, 1, 1440)),
+    },
+    idle: {
+      enabled: boolOr(il.enabled, def.idle.enabled),
+      timeoutMinutes: Math.round(num(il.timeoutMinutes, def.idle.timeoutMinutes, 1, 1440)),
     },
     theme: r.theme === 'light' ? 'light' : 'dark',
   }

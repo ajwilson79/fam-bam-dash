@@ -81,6 +81,9 @@ JPG, JPEG, PNG, GIF, WEBP, AVIF.
 ### Why do photos have a blurred background?
 The slideshow uses `object-contain` to show the full image without cropping. The blurred backdrop fills the letterbox areas so the panel looks full rather than having black bars.
 
+### What is the Ken Burns effect?
+Photos gently zoom and pan while displayed — a subtle animation that makes the slideshow feel alive without being distracting. Four different zoom/pan variants cycle through your photos automatically.
+
 ### Can I use Google Photos?
 Yes, if `VITE_GOOGLE_PHOTOS_ALBUM_ID` is set in `app/.env.local`. The slideshow merges uploaded photos and Google Photos album photos.
 
@@ -100,6 +103,20 @@ Yes. On the dashboard, drag the **⠿** handle on a list column to move it. You 
 
 ### Are todos backed up?
 Yes. Every save writes to both `localStorage` and `app/data/todos.json` on the server. If your browser clears localStorage, the app restores from the server file on next load. In Docker, map `/app/data` to a persistent host path so it survives container updates.
+
+## Screensaver / Picture Frame Mode
+
+### How do I enable picture frame mode?
+Open Settings (⚙️ bottom-right) → ⚙️ Settings tab → 💤 Screensaver section. Toggle **Enable picture frame mode when idle** on and set your preferred idle timeout in minutes (default 5). After that period of no interaction, the display switches to a fullscreen photo slideshow. Any mouse move, click, touch, or keypress brings the dashboard back.
+
+### What is the minimum/maximum idle timeout?
+1 minute minimum, 1440 minutes (24 hours) maximum.
+
+### Why don't photos appear in screensaver mode?
+Make sure you have photos uploaded first — Settings → 🖼️ Photos. The screensaver uses the same photo library as the dashboard slideshow.
+
+### Can I disable the screensaver?
+Yes. Settings → ⚙️ Settings → 💤 Screensaver → uncheck **Enable picture frame mode when idle**.
 
 ## Appearance
 

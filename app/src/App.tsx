@@ -5,7 +5,7 @@ import PhotoSlideshow from './widgets/PhotoSlideshow'
 import SettingsPanel from './widgets/SettingsPanel'
 import Clock from './widgets/Clock'
 import TodoPanel from './widgets/TodoPanel'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getTabId, loadSettings, setSettings, subscribeSettings, syncSettingsFromServer } from './lib/settings'
 import { handleOAuthCallback } from './lib/oauth'
 import { syncCalendars } from './lib/gapi'
@@ -14,10 +14,33 @@ import { syncFromServer } from './lib/todo'
 function App() {
   const [openSettings, setOpenSettings] = useState(false)
   const [theme, setTheme] = useState(() => loadSettings().theme)
+  const [isIdle, setIsIdle] = useState(false)
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const unsub = subscribeSettings(() => setTheme(loadSettings().theme))
     return () => { unsub() }
+  }, [])
+
+  // Idle screensaver: reset timer on any activity; enter idle when timer fires
+  useEffect(() => {
+    function resetTimer() {
+      const s = loadSettings()
+      setIsIdle(false)  // always reset — avoids stale closure check on isIdle
+      if (idleTimer.current) clearTimeout(idleTimer.current)
+      if (s.idle.enabled) {
+        idleTimer.current = setTimeout(() => setIsIdle(true), s.idle.timeoutMinutes * 60_000)
+      }
+    }
+    const events = ['mousemove', 'mousedown', 'touchstart', 'keydown'] as const
+    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
+    resetTimer()
+    const unsub = subscribeSettings(resetTimer)
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetTimer))
+      if (idleTimer.current) clearTimeout(idleTimer.current)
+      unsub()
+    }
   }, [])
 
   // Restore settings and todos from server on startup (survives browser localStorage wipes)
@@ -93,27 +116,39 @@ function App() {
         </section>
       </main>
 
-      <div className="dash-fabs">
-        <button
-          onClick={() => {
-            const next = theme === 'dark' ? 'light' : 'dark'
-            setTheme(next)
-            setSettings({ ...loadSettings(), theme: next })
-          }}
-          className="settings-fab"
-          aria-label="Toggle theme"
-          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {theme === 'dark' ? '☀' : '☾'}
-        </button>
-        <button
-          onClick={() => setOpenSettings(true)}
-          className="settings-fab"
-          aria-label="Open settings"
-        >
-          ⚙
-        </button>
-      </div>
+      {!isIdle && (
+        <div className="dash-fabs">
+          <button
+            onClick={() => {
+              const next = theme === 'dark' ? 'light' : 'dark'
+              setTheme(next)
+              setSettings({ ...loadSettings(), theme: next })
+            }}
+            className="settings-fab"
+            aria-label="Toggle theme"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? '☀' : '☾'}
+          </button>
+          <button
+            onClick={() => setOpenSettings(true)}
+            className="settings-fab"
+            aria-label="Open settings"
+          >
+            ⚙
+          </button>
+        </div>
+      )}
+
+      {/* Idle screensaver — fullscreen photo frame, dismissed by any interaction */}
+      {isIdle && (
+        <div className="fixed inset-0 z-40 bg-black" style={{ width: '100vw', height: '100vh' }}>
+          <PhotoSlideshow />
+          <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none">
+            <span className="text-white/30 text-sm select-none">tap to return</span>
+          </div>
+        </div>
+      )}
 
       <SettingsPanel open={openSettings} onClose={() => setOpenSettings(false)} />
     </div>

@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Idle screensaver / picture frame mode** – after a configurable timeout (default 5 min) with no user interaction, the display switches to a fullscreen photo slideshow with Ken Burns animation; any mouse move, click, touch, or keypress returns to the dashboard. Configured in Settings → ⚙️ Settings → 💤 Screensaver
+- **Ken Burns effect** – photos in the slideshow have a gentle zoom/pan animation with four alternating variants
 - **Live multi-screen sync** – Server-Sent Events (`/api/sse`) push a reload to all open browser tabs whenever settings or todos are saved; the tab that made the change is excluded so the editor is never disrupted
 - **Configurable todo auto-remove delay** – Settings → ⚙️ Settings → To-Do; default 10 minutes, range 1–1440
 - **Calendar color coding** – each event shows a colored dot matching its Google Calendar color
@@ -14,6 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Server-persisted settings** – settings saved to `app/data/settings.json`; restored on startup if localStorage is empty
 - **Calendar shows current day forward only** – past days filtered out; 30-day window
 - Weather units toggle (°F/mph ↔ °C/km/h) in Settings → ⚙️ Settings
+
+### Fixed
+- Settings panel Close button is now clearly visible in dark mode (explicit text color + border)
 
 ## [1.1.0] - 2026-04-19
 
