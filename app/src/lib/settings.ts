@@ -126,7 +126,7 @@ export async function syncSettingsFromServer(): Promise<void> {
 const listeners = new Set<() => void>()
 export function subscribeSettings(fn: () => void) {
   listeners.add(fn)
-  return () => listeners.delete(fn)
+  return () => { listeners.delete(fn) }
 }
 
 export function setSettings(s: Settings) {
