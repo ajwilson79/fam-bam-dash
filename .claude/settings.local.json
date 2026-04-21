@@ -6,7 +6,11 @@
       "Bash(rmdir /c/Users/awils/fam-bam-dash/.github/workflows)",
       "Bash(rmdir /c/Users/awils/fam-bam-dash/.github)",
       "Bash(npm run *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)"
     ]
   }
 }
