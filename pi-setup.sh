@@ -1,0 +1,271 @@
+#!/bin/bash
+# Fam Bam Dash — Raspberry Pi Setup
+#
+# Run this once on a fresh Raspberry Pi OS (Bookworm) installation.
+# It installs Node.js, configures the app, installs it as a systemd service,
+# sets up Chromium in kiosk mode, and optionally configures a PIR motion sensor.
+#
+# Usage:
+#   chmod +x pi-setup.sh
+#   ./pi-setup.sh
+
+set -e
+
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+APP_DIR="$REPO_DIR/app"
+SERVICE_FILE=/etc/systemd/system/fam-bam-dash.service
+CURRENT_USER="${SUDO_USER:-$USER}"
+
+# ── Colours ───────────────────────────────────────────────────────────────────
+
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+header()  { echo -e "\n${BOLD}${CYAN}━━━  $*  ━━━${RESET}"; }
+step()    { echo -e "${CYAN}▸ $*${RESET}"; }
+ok()      { echo -e "${GREEN}✓ $*${RESET}"; }
+warn()    { echo -e "${YELLOW}⚠ $*${RESET}"; }
+fail()    { echo -e "${RED}✗ $*${RESET}"; exit 1; }
+ask()     { echo -en "${BOLD}$* ${RESET}"; }
+
+# ── Preflight ─────────────────────────────────────────────────────────────────
+
+header "Fam Bam Dash — Raspberry Pi Setup"
+echo ""
+echo "This script will:"
+echo "  1. Install Node.js 20"
+echo "  2. Configure app/.env.local (API keys, timezone)"
+echo "  3. Build the app"
+echo "  4. Install fam-bam-dash as a systemd service"
+echo "  5. Set up Chromium kiosk mode"
+echo "  6. Optionally configure portrait display rotation"
+echo "  7. Optionally set up the PIR motion sensor service"
+echo ""
+ask "Continue? [Y/n]:"
+read -r REPLY
+[[ -z "$REPLY" || "$REPLY" =~ ^[Yy]$ ]] || exit 0
+
+if [ "$EUID" -eq 0 ]; then
+    fail "Do not run this script as root. Run as your normal Pi user; sudo will be used when needed."
+fi
+
+if ! ping -c 1 8.8.8.8 &>/dev/null; then
+    fail "No internet connection detected. Connect to the network and try again."
+fi
+
+# ── Step 1: Node.js ───────────────────────────────────────────────────────────
+
+header "Step 1 of 7: Node.js"
+
+NODE_OK=false
+if command -v node &>/dev/null; then
+    NODE_VER=$(node --version | sed 's/v//' | cut -d. -f1)
+    if [ "$NODE_VER" -ge 20 ]; then
+        ok "Node.js $(node --version) already installed."
+        NODE_OK=true
+    else
+        warn "Node.js $(node --version) is too old (need 20+). Upgrading..."
+    fi
+fi
+
+if [ "$NODE_OK" = false ]; then
+    step "Installing Node.js 20 via NodeSource..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - >/dev/null
+    sudo apt-get install -y nodejs >/dev/null
+    ok "Node.js $(node --version) installed."
+fi
+
+# ── Step 2: Configure .env.local ─────────────────────────────────────────────
+
+header "Step 2 of 7: Environment Variables"
+
+ENV_FILE="$APP_DIR/.env.local"
+
+if [ -f "$ENV_FILE" ]; then
+    warn "app/.env.local already exists."
+    ask "Reconfigure it? [y/N]:"
+    read -r RECONFIGURE
+    if [[ ! "$RECONFIGURE" =~ ^[Yy]$ ]]; then
+        ok "Keeping existing app/.env.local."
+        SKIP_ENV=true
+    fi
+fi
+
+if [ "${SKIP_ENV:-false}" = false ]; then
+    echo ""
+    echo "  Enter your configuration values."
+    echo "  Press Enter to leave optional values blank — they can be set later in the browser."
+    echo ""
+
+    ask "  Google OAuth Client ID (VITE_GOOGLE_CLIENT_ID) [optional]:"; read -r GCLIENT_ID
+    ask "  Google OAuth Client Secret (GOOGLE_CLIENT_SECRET) [optional]:"; read -r GCLIENT_SECRET
+    ask "  Google Calendar iCal URL (GCAL_ICAL_URL) [optional]:"; read -r GICAL_URL
+    ask "  Timezone (VITE_TIMEZONE) [America/New_York]:"; read -r TIMEZONE
+    TIMEZONE="${TIMEZONE:-America/New_York}"
+
+    cat > "$ENV_FILE" << EOF
+# Google OAuth — required for Calendar OAuth and Google Photos
+VITE_GOOGLE_CLIENT_ID=${GCLIENT_ID}
+GOOGLE_CLIENT_SECRET=${GCLIENT_SECRET}
+
+# Google Calendar iCal feed (server-side proxy, simpler alternative to OAuth)
+GCAL_ICAL_URL=${GICAL_URL}
+
+# Timezone for calendar display
+VITE_TIMEZONE=${TIMEZONE}
+
+# Fallback weather coordinates — enter your ZIP in the app instead
+VITE_LAT=37.7749
+VITE_LON=-122.4194
+EOF
+    ok "Wrote app/.env.local."
+fi
+
+# ── Step 3: Build ─────────────────────────────────────────────────────────────
+
+header "Step 3 of 7: Build"
+
+step "Installing npm dependencies..."
+cd "$APP_DIR"
+npm install --silent
+ok "Dependencies installed."
+
+step "Building app..."
+npm run build
+ok "Build complete."
+cd "$REPO_DIR"
+
+# ── Step 4: App systemd service ───────────────────────────────────────────────
+
+header "Step 4 of 7: App Service"
+
+if [ -f "$SERVICE_FILE" ]; then
+    warn "fam-bam-dash service already exists — reinstalling."
+    sudo systemctl stop fam-bam-dash 2>/dev/null || true
+fi
+
+step "Creating systemd service..."
+sudo tee "$SERVICE_FILE" > /dev/null << EOF
+[Unit]
+Description=Fam Bam Dash
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=${APP_DIR}
+ExecStart=/usr/bin/npm run preview
+Restart=always
+RestartSec=5
+User=${CURRENT_USER}
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable fam-bam-dash
+sudo systemctl start fam-bam-dash
+ok "fam-bam-dash service installed and started."
+
+# Verify it came up
+sleep 3
+if ! systemctl is-active --quiet fam-bam-dash; then
+    warn "Service may not have started correctly. Check: journalctl -u fam-bam-dash -n 20"
+else
+    ok "Service is running at http://localhost:12000"
+fi
+
+# ── Step 5: Kiosk mode ────────────────────────────────────────────────────────
+
+header "Step 5 of 7: Kiosk Mode"
+
+KIOSK_SCRIPT="$REPO_DIR/kiosk-setup.sh"
+if [ ! -f "$KIOSK_SCRIPT" ]; then
+    warn "kiosk-setup.sh not found — skipping. Run it manually when ready."
+else
+    chmod +x "$KIOSK_SCRIPT"
+    bash "$KIOSK_SCRIPT"
+fi
+
+# ── Step 6: Portrait rotation ─────────────────────────────────────────────────
+
+header "Step 6 of 7: Display Rotation"
+
+echo "  The dashboard is optimised for portrait (vertical) orientation."
+ask "  Rotate display to portrait mode? [y/N]:"
+read -r DO_ROTATE
+
+if [[ "$DO_ROTATE" =~ ^[Yy]$ ]]; then
+    echo ""
+    echo "  Which direction does your display need to rotate?"
+    echo "    1) 90° clockwise   (right edge becomes bottom)"
+    echo "    2) 90° anticlockwise (left edge becomes bottom)"
+    ask "  Choose [1/2]:"
+    read -r ROTATE_DIR
+
+    CONFIG_FILE="/boot/firmware/config.txt"
+    # Fallback for older Pi OS layout
+    [ -f "$CONFIG_FILE" ] || CONFIG_FILE="/boot/config.txt"
+
+    if [[ "$ROTATE_DIR" == "2" ]]; then
+        ROTATE_VAL=3   # 270° = anticlockwise 90°
+    else
+        ROTATE_VAL=1   # 90° clockwise
+    fi
+
+    if grep -q "^display_rotate=" "$CONFIG_FILE" 2>/dev/null; then
+        sudo sed -i "s/^display_rotate=.*/display_rotate=${ROTATE_VAL}/" "$CONFIG_FILE"
+    else
+        echo "display_rotate=${ROTATE_VAL}" | sudo tee -a "$CONFIG_FILE" > /dev/null
+    fi
+    ok "Display rotation set (takes effect after reboot)."
+else
+    ok "Skipped — you can rotate later via /boot/firmware/config.txt (display_rotate=1 or 3)."
+fi
+
+# ── Step 7: Motion sensor ─────────────────────────────────────────────────────
+
+header "Step 7 of 7: Motion Sensor (optional)"
+
+echo "  A PIR motion sensor on GPIO pin 17 can wake the screen on motion,"
+echo "  switch between dashboard and picture frame modes by time of day,"
+echo "  and turn the screen off when no motion is detected."
+echo ""
+ask "  Do you have a PIR sensor wired to GPIO pin 17? [y/N]:"
+read -r HAS_SENSOR
+
+if [[ "$HAS_SENSOR" =~ ^[Yy]$ ]]; then
+    SENSOR_SCRIPT="$REPO_DIR/scripts/motion-sensor-setup.sh"
+    if [ ! -f "$SENSOR_SCRIPT" ]; then
+        warn "scripts/motion-sensor-setup.sh not found — skipping."
+    else
+        chmod +x "$SENSOR_SCRIPT"
+        bash "$SENSOR_SCRIPT"
+    fi
+else
+    ok "Skipped — you can run scripts/motion-sensor-setup.sh later if you add a sensor."
+fi
+
+# ── Done ──────────────────────────────────────────────────────────────────────
+
+echo ""
+echo -e "${GREEN}${BOLD}━━━  Setup complete!  ━━━${RESET}"
+echo ""
+echo "  Dashboard:    http://localhost:12000"
+echo "  App service:  sudo systemctl status fam-bam-dash"
+echo "  App logs:     journalctl -u fam-bam-dash -f"
+if [[ "$HAS_SENSOR" =~ ^[Yy]$ ]]; then
+echo "  Sensor logs:  journalctl -u fam-bam-motion -f"
+fi
+echo ""
+echo "  Remote admin: open http://$(hostname -I | awk '{print $1}'):12000 from any device on your network"
+echo ""
+ask "Reboot now to apply all changes? [Y/n]:"
+read -r DO_REBOOT
+if [[ -z "$DO_REBOOT" || "$DO_REBOOT" =~ ^[Yy]$ ]]; then
+    sudo reboot
+fi

@@ -120,6 +120,8 @@ Run `npm run build` then `npm run preview` — `vite preview` serves `dist/` and
 
 Manage with a systemd service (see conversation history for an example unit file). Persistent data lives in `app/data/` (settings + todos) and `app/public/uploads/` (photos) — back these up.
 
-`kiosk-setup.sh` in the repo root configures Chromium to auto-launch fullscreen on boot.
+`pi-setup.sh` is the single entry point for a full Pi install — Node.js, build, app service, kiosk mode, display rotation, and optional motion sensor, all in one script.
 
-`scripts/motion-sensor-setup.sh` is optional — only needed when a PIR sensor is wired to GPIO pin 17. It installs a separate `fam-bam-motion` systemd service. Users without a sensor never need to run it.
+`kiosk-setup.sh` configures Chromium kiosk mode (called by `pi-setup.sh`, can also be run standalone).
+
+`scripts/motion-sensor-setup.sh` is optional — installs the `fam-bam-motion` systemd service. Only needed when a PIR sensor is wired to GPIO pin 17.

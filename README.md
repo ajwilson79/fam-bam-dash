@@ -98,15 +98,24 @@ Open Settings → 🖼️ Photos, then drag-and-drop or click to upload. Photos 
 **Option B – Place files manually:**
 Copy files to `app/public/uploads/`. Supported formats: jpg, jpeg, png, gif, webp, avif.
 
-## Display Setup
+## Raspberry Pi Setup
+
+Run a single script on a fresh Pi OS (Bookworm) installation:
+
+```bash
+chmod +x pi-setup.sh
+./pi-setup.sh
+```
+
+This installs Node.js 20, walks through `app/.env.local` configuration, builds the app, installs it as a systemd service, sets up Chromium kiosk mode, optionally rotates the display to portrait, and optionally installs the PIR motion sensor service.
+
+## Display Setup (non-Pi)
 
 The layout is optimized for portrait orientation (taller than wide):
 
 1. Rotate your display to portrait mode
 2. Open the dashboard full-screen (F11)
 3. Disable screen sleep in your OS settings
-4. For Raspberry Pi kiosk mode, run `kiosk-setup.sh` — it configures Chromium to auto-launch fullscreen on boot via systemd
-5. If you have a PIR motion sensor on GPIO pin 17, run `scripts/motion-sensor-setup.sh` to install the optional motion sensor service
 
 ## Tech Stack
 
