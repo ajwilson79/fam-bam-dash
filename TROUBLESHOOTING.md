@@ -8,12 +8,7 @@
 3. Check the Network tab for failed requests (401, 404, CORS errors)
 
 ### Check Server Logs
-The terminal running `npm run dev` (or `docker-compose logs -f`) shows server-side errors: iCal proxy, OAuth token exchange, photo upload errors, todos/settings API errors.
-
-### Check Docker Logs
-```bash
-docker-compose logs -f
-```
+The terminal running `npm run dev` (or `npm run preview`) shows server-side errors: iCal proxy, OAuth token exchange, photo upload errors, todos/settings API errors.
 
 ## Weather
 
@@ -42,7 +37,7 @@ The app tries three sources in order:
 
 ### OAuth connect button does nothing / redirect fails
 - Verify `VITE_GOOGLE_CLIENT_ID` is set in `app/.env.local`
-- In Google Cloud Console → Credentials → your OAuth client, confirm the redirect URI matches your current URL exactly (e.g., `http://localhost:12000` or `http://your-unraid-ip:12000`)
+- In Google Cloud Console → Credentials → your OAuth client, confirm the redirect URI matches your current URL exactly (e.g., `http://localhost:12000` or `http://your-pi-ip:12000`)
 - Check the browser didn't block the popup
 
 ### OAuth token exchange returns 400 or 401
@@ -78,7 +73,6 @@ The slideshow listens for a `photos-changed` DOM event fired after upload. If it
 ### Todo items not persisting across reloads
 - Todo state is saved to `localStorage` and also synced to `app/data/todos.json` on the server
 - If both are lost, check that the server's `data/` directory is writable
-- In Docker, verify the `/app/data` volume is correctly mapped to a persistent host path
 
 ### Checked items not auto-removing
 Items auto-remove after the configured delay (default 10 minutes, adjustable in Settings → ⚙️ Settings → To-Do). The cleanup runs on a 30-second timer. If items never disappear, check the browser console for JavaScript errors.
@@ -107,7 +101,7 @@ The new timeout takes effect on the next interaction that resets the timer. Move
 ### Settings reset after reload
 - Settings are saved to both `localStorage` and `app/data/settings.json`
 - On startup the app restores from the server file if localStorage is empty
-- If settings keep resetting, check that the server's `data/` directory is writable and the `/app/data` Docker volume is mapped
+- If settings keep resetting, check that the server's `data/` directory is writable
 
 ## Display / Layout
 
@@ -118,25 +112,6 @@ The new timeout takes effect on the next interaction that resets the timer. Move
 
 ### Dark/light mode toggle missing
 The theme toggle button (☀ / ☾) is a floating action button in the **bottom-right corner** of the dashboard alongside the settings gear.
-
-## Docker
-
-### Container won't start
-```bash
-docker-compose logs -f
-docker ps -a   # check exit code
-```
-
-### Build fails
-```bash
-docker system prune -a          # clear cache
-docker-compose build --no-cache
-```
-
-### Data doesn't persist across container restarts
-Verify both volume mappings are present in your container config:
-- `/app/data` → a persistent host path (e.g., `/mnt/user/appdata/fam-bam-dash/data`)
-- `/app/public/uploads` → a persistent host path (e.g., `/mnt/user/appdata/fam-bam-dash/uploads`)
 
 ## Live Sync (SSE)
 
@@ -167,9 +142,35 @@ npm run dev
 ### Server-side variables not available
 Variables without the `VITE_` prefix (e.g. `GOOGLE_CLIENT_SECRET`, `GCAL_ICAL_URL`) are only available in Vite server plugins, not in the browser bundle. If a server endpoint is returning errors, verify these are set **without** the `VITE_` prefix.
 
+## Motion Sensor (optional hardware)
+
+### Script exits immediately with "Motion sensor not available"
+- Confirm the PIR sensor is wired to GPIO pin 17
+- Install the library: `sudo apt-get install python3-gpiozero`
+- Run the script manually to see the full error: `python3 scripts/motion_sensor.py`
+
+### Screen doesn't turn on when motion is detected
+- Verify `DISPLAY=:0` is set in the systemd service environment (required for `xset` to find the display)
+- Test `xset dpms force on` manually in a terminal on the Pi to confirm `xset` works
+- Check logs: `journalctl -u fam-bam-motion -f`
+
+### App doesn't switch to dashboard/screensaver mode when motion is detected
+- Confirm the fam-bam-dash server is running and reachable at `http://localhost:12000`
+- The script POSTs to `/api/display-mode` — test it manually:
+  ```bash
+  curl -X POST http://localhost:12000/api/display-mode -H "Content-Type: application/json" -d '{"mode":"dashboard"}'
+  ```
+- Check that the browser tab has an active SSE connection (Network tab → `/api/sse` should be "pending")
+
+### Motion sensor settings changes aren't taking effect
+The script polls `/api/settings` every 60 seconds. Wait up to a minute after saving in the UI, or restart the service: `sudo systemctl restart fam-bam-motion`.
+
+### Screen turns off too quickly / not quickly enough at night
+Adjust **Night: screen off after** in Settings → ⚙️ Settings → 🚶 Motion Sensor. Changes are picked up within 60 seconds.
+
 ## Still Having Issues?
 
 1. Collect browser console errors (screenshot or copy)
-2. Collect server terminal output (`docker-compose logs -f` or the `npm run dev` terminal)
+2. Collect server terminal output (the `npm run dev` or `npm run preview` terminal)
 3. Run `npm run build` — TypeScript errors appear here
 4. Open a GitHub issue with: clear description, steps to reproduce, expected vs actual behavior, and the above output

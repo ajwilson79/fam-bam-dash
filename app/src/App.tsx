@@ -47,13 +47,18 @@ function App() {
   useEffect(() => { syncSettingsFromServer() }, [])
   useEffect(() => { syncFromServer() }, [])
 
-  // SSE: reload this tab when another tab saves settings
+  // SSE: reload on settings change; switch display mode when motion sensor signals
   useEffect(() => {
     const es = new EventSource('/api/sse')
     es.onmessage = (e: MessageEvent<string>) => {
-      if (typeof e.data === 'string' && e.data.startsWith('reload:')) {
+      if (typeof e.data !== 'string') return
+      if (e.data.startsWith('reload:')) {
         const senderTabId = e.data.slice(7)
         if (senderTabId !== getTabId()) window.location.reload()
+      } else if (e.data === 'display-mode:dashboard') {
+        setIsIdle(false)
+      } else if (e.data === 'display-mode:screensaver') {
+        setIsIdle(true)
       }
     }
     return () => es.close()

@@ -176,8 +176,8 @@ npm run lint
 # Build
 npm run build
 
-# Test Docker build
-docker-compose build
+# Unit tests
+npm run test
 ```
 
 ## 🐛 Bug Reports

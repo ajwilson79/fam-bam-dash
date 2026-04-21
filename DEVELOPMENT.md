@@ -56,8 +56,10 @@ fam-bam-dash/
 │   ├── vite.config.ts            # Vite + server-side plugins (settings, todos, photos, iCal, gcal proxy, OAuth)
 │   ├── tsconfig.app.json
 │   └── tsconfig.node.json        # includes "types": ["node"] for vite plugins
-├── Dockerfile
-├── docker-compose.yml
+├── scripts/
+│   ├── motion_sensor.py          # Optional PIR sensor script (reads settings, controls screen + app mode)
+│   └── motion-sensor-setup.sh   # Installs motion sensor as a systemd service
+├── kiosk-setup.sh
 └── README.md
 ```
 
@@ -67,14 +69,15 @@ fam-bam-dash/
 
 | Route | Plugin | Purpose |
 |-------|--------|---------|
-| `GET /api/sse` | `settingsPlugin` | Server-Sent Events stream; holds connection open and pushes `reload:<tabId>` to all tabs when settings or todos are saved |
+| `GET /api/sse` | `settingsPlugin` | Server-Sent Events stream; holds connection open and pushes events to all tabs |
 | `GET /api/settings` | `settingsPlugin` | Returns saved settings from `data/settings.json` |
-| `POST /api/settings` | `settingsPlugin` | Writes settings to `data/settings.json`; broadcasts reload to all other tabs |
+| `POST /api/settings` | `settingsPlugin` | Writes settings to `data/settings.json`; broadcasts `reload:<tabId>` to all other tabs |
 | `GET /api/todos` | `todosPlugin` | Returns saved todos from `data/todos.json` |
-| `POST /api/todos` | `todosPlugin` | Writes todos to `data/todos.json`; broadcasts reload to all other tabs |
+| `POST /api/todos` | `todosPlugin` | Writes todos to `data/todos.json`; broadcasts `reload:<tabId>` to all other tabs |
 | `GET /api/photos/list` | `photosPlugin` | Lists files in `public/uploads/` |
 | `POST /api/photos/upload?name=file.jpg` | `photosPlugin` | Saves binary body to `public/uploads/` |
 | `DELETE /api/photos/delete?name=file.jpg` | `photosPlugin` | Deletes file from `public/uploads/` |
+| `POST /api/display-mode` | `displayModePlugin` | Accepts `{mode: "dashboard"\|"screensaver"}` from motion sensor script; broadcasts `display-mode:<mode>` via SSE |
 | `GET /api/ical` | `icalProxyPlugin` | Fetches `GCAL_ICAL_URL` server-side (avoids browser CORS) |
 | `GET /api/gcal/*` | `gcalProxyPlugin` | Proxies Google Calendar REST API (avoids browser CORS) |
 | `POST /api/auth/token` | `oauthPlugin` | Exchanges OAuth code for tokens using `GOOGLE_CLIENT_SECRET` |
@@ -82,18 +85,24 @@ fam-bam-dash/
 
 ## Live Multi-Screen Sync (SSE)
 
-All open browser tabs connect to `GET /api/sse` on startup and hold a persistent Server-Sent Events connection. Whenever any tab saves settings or todos, the server broadcasts `reload:<tabId>` to every connected tab. Each tab compares the received `tabId` against its own (stored in `sessionStorage`) — if they differ, the tab reloads. This means:
+All open browser tabs connect to `GET /api/sse` on startup and hold a persistent Server-Sent Events connection. The SSE stream carries two types of events:
+
+| Event | Source | Effect |
+|-------|--------|--------|
+| `reload:<tabId>` | Settings or todos saved by a browser tab | Other tabs reload to pick up the change; the originating tab is skipped |
+| `display-mode:dashboard` | Motion sensor script POSTs to `/api/display-mode` | All tabs exit screensaver and show the full dashboard |
+| `display-mode:screensaver` | Motion sensor script POSTs to `/api/display-mode` | All tabs enter picture frame / screensaver mode |
 
 - A change made on your **PC** immediately refreshes the **Pi display** without manual intervention
 - The **PC tab** that made the change is never disrupted mid-edit
 - The tab ID is generated once per browser session in `settings.ts → getTabId()` and included as the `X-Tab-Id` header on every POST
 
-The `sseClients` set and `broadcast()` function live at module scope in `vite.config.ts` so both `settingsPlugin` and `todosPlugin` can share them.
+The `sseClients` set and `broadcast()` function live at module scope in `vite.config.ts` so all plugins can share them.
 
 ## State Management
 
 ### Settings (`lib/settings.ts`)
-- Type: `Settings` – weather, calendar, slideshow, todo, theme
+- Type: `Settings` – weather, calendar, slideshow, todo, motionSensor, theme
 - Stored in `localStorage` under `fam-bam-settings`; also synced to `/api/settings` on every save
 - On startup, `syncSettingsFromServer()` restores from `data/settings.json` if localStorage is empty
 - Pub/sub: `subscribeSettings(fn)` / `setSettings(s)` – all widgets re-render on change

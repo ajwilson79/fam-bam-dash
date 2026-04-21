@@ -2,7 +2,7 @@
 
 Get Fam Bam Dash running in 5 minutes.
 
-## Fastest Way (Local Dev)
+## Quick Start
 
 ```bash
 cd app
@@ -13,15 +13,6 @@ npm run dev
 
 No API keys are required to start. Weather works immediately with default coordinates; enter your ZIP code in Settings to switch to your location.
 
-## Docker
-
-```bash
-git clone <your-repo-url>
-cd fam-bam-dash
-docker-compose up -d
-# Open http://localhost:12000
-```
-
 ## First-Run Configuration
 
 Once the app is open:
@@ -31,6 +22,7 @@ Once the app is open:
    - Enter your **ZIP code** and click **Look up** – the app resolves it to coordinates and shows the city name
    - Choose **°F / mph** or **°C / km/h** under Units
    - Under **💤 Screensaver**, enable picture frame mode and set your preferred idle timeout (default 5 minutes)
+   - Under **🚶 Motion Sensor**, configure night hours and screen-off timeouts (only relevant if you have a PIR sensor on GPIO pin 17)
 3. Go to the **📅 Calendars** tab to connect a Google account (requires OAuth setup – see below)
 4. Go to the **🖼️ Photos** tab to upload family photos directly from the browser
 5. Go to the **✅ To-Do** tab to create lists for each family member
@@ -99,14 +91,8 @@ npm run dev
 # Type-check and build
 npm run build
 
-# Preview production build locally
+# Run production build locally
 npm run preview
-
-# Docker
-docker-compose up -d
-docker-compose logs -f
-docker-compose down
-docker-compose build --no-cache && docker-compose up -d
 ```
 
 ## Troubleshooting

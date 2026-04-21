@@ -196,6 +196,44 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
                 </div>
               </section>
 
+              {/* Motion Sensor */}
+              <section className="bg-theme-elevated rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-1">🚶 Motion Sensor</h3>
+                <p className="text-xs text-slate-500 mb-3">Requires a PIR sensor wired to GPIO pin 17. Ignored if the sensor script is not running.</p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="flex flex-col">
+                      <span className="text-sm text-slate-300 mb-1">Night starts (hour, 0–23)</span>
+                      <input type="number" min={0} max={23}
+                        value={s.motionSensor.nightStartHour}
+                        onChange={e => update({ ...s, motionSensor: { ...s.motionSensor, nightStartHour: Math.min(23, Math.max(0, Number(e.target.value))) } })}
+                        className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none" />
+                    </label>
+                    <label className="flex flex-col">
+                      <span className="text-sm text-slate-300 mb-1">Night ends (hour, 0–23)</span>
+                      <input type="number" min={0} max={23}
+                        value={s.motionSensor.nightEndHour}
+                        onChange={e => update({ ...s, motionSensor: { ...s.motionSensor, nightEndHour: Math.min(23, Math.max(0, Number(e.target.value))) } })}
+                        className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none" />
+                    </label>
+                  </div>
+                  <label className="flex flex-col">
+                    <span className="text-sm text-slate-300 mb-1">Day: screen off after (minutes of no motion)</span>
+                    <input type="number" min={1} max={1440}
+                      value={s.motionSensor.dayScreenOffMinutes}
+                      onChange={e => update({ ...s, motionSensor: { ...s.motionSensor, dayScreenOffMinutes: Math.max(1, Number(e.target.value)) } })}
+                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none w-32" />
+                  </label>
+                  <label className="flex flex-col">
+                    <span className="text-sm text-slate-300 mb-1">Night: screen off after (minutes of no motion)</span>
+                    <input type="number" min={1} max={60}
+                      value={s.motionSensor.nightScreenOffMinutes}
+                      onChange={e => update({ ...s, motionSensor: { ...s.motionSensor, nightScreenOffMinutes: Math.max(1, Number(e.target.value)) } })}
+                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none w-32" />
+                  </label>
+                </div>
+              </section>
+
               {/* To-Do */}
               <section className="bg-theme-elevated rounded-lg p-4">
                 <h3 className="font-semibold text-lg mb-3">✅ To-Do</h3>

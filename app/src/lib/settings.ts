@@ -4,6 +4,12 @@ export type Settings = {
   slideshow: { intervalMs: number; shuffle: boolean; useGooglePhotos: boolean }
   todo: { autoRemoveMinutes: number }
   idle: { enabled: boolean; timeoutMinutes: number }
+  motionSensor: {
+    nightStartHour: number   // 0–23, hour when night mode begins (default 22 = 10pm)
+    nightEndHour: number     // 0–23, hour when night mode ends (default 7 = 7am)
+    dayScreenOffMinutes: number   // minutes of no motion before screen off during day
+    nightScreenOffMinutes: number // minutes of no motion before screen off at night
+  }
   theme: 'dark' | 'light'
 }
 
@@ -37,6 +43,12 @@ export function defaultSettings(): Settings {
     slideshow: { intervalMs: 12000, shuffle: true, useGooglePhotos: !!import.meta.env.VITE_GOOGLE_PHOTOS_ALBUM_ID },
     todo: { autoRemoveMinutes: 10 },
     idle: { enabled: true, timeoutMinutes: 5 },
+    motionSensor: {
+      nightStartHour: 22,
+      nightEndHour: 7,
+      dayScreenOffMinutes: 10,
+      nightScreenOffMinutes: 1,
+    },
     theme: 'dark',
   }
 }
@@ -67,6 +79,7 @@ function validateSettings(raw: unknown): Settings {
   const sl = obj(r.slideshow)
   const td = obj(r.todo)
   const il = obj(r.idle)
+  const ms = obj(r.motionSensor)
   return {
     weather: {
       zip: strOr(w.zip, def.weather.zip),
@@ -91,6 +104,12 @@ function validateSettings(raw: unknown): Settings {
     idle: {
       enabled: boolOr(il.enabled, def.idle.enabled),
       timeoutMinutes: Math.round(num(il.timeoutMinutes, def.idle.timeoutMinutes, 1, 1440)),
+    },
+    motionSensor: {
+      nightStartHour: Math.round(num(ms.nightStartHour, def.motionSensor.nightStartHour, 0, 23)),
+      nightEndHour: Math.round(num(ms.nightEndHour, def.motionSensor.nightEndHour, 0, 23)),
+      dayScreenOffMinutes: Math.round(num(ms.dayScreenOffMinutes, def.motionSensor.dayScreenOffMinutes, 1, 1440)),
+      nightScreenOffMinutes: Math.round(num(ms.nightScreenOffMinutes, def.motionSensor.nightScreenOffMinutes, 1, 60)),
     },
     theme: r.theme === 'light' ? 'light' : 'dark',
   }

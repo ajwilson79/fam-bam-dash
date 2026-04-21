@@ -13,28 +13,20 @@ Fam Bam Dash is a customizable, touch-friendly smart home dashboard designed to 
 - **Weather with US ZIP Code** – Enter a ZIP code and the app resolves it to coordinates automatically; supports °F/mph or °C/km/h; shows current conditions, 24-hour hourly scroll, and 5-day forecast
 - **Photo Slideshow** – Upload photos directly from the browser (drag-and-drop); displays full images with a blurred backdrop fill and Ken Burns zoom/pan animation
 - **Idle Screensaver / Picture Frame Mode** – After a configurable idle timeout (default 5 minutes), the display switches to a fullscreen photo slideshow; any touch, click, or keypress returns to the dashboard
+- **Motion Sensor Integration (optional)** – A PIR sensor on GPIO pin 17 wakes the screen on motion; configurable day/night behaviour (dashboard vs picture frame) and per-period screen-off timeouts, all adjustable from the browser
 - **Interactive To-Do Lists** – Per-person lists with checkboxes; checked items auto-remove after a configurable delay (default 10 minutes)
 - **Live Multi-Screen Sync** – Any change (settings or todos) made on one device instantly reloads all other open screens via Server-Sent Events; the screen that made the change is never disrupted
 - **Dark / Light Mode** – Toggle from the floating button on the dashboard
 - **Portrait-Optimized Layout** – Two-column grid scaled for tall screens
-- **Self-Hosted** – Runs entirely on Node.js via `vite preview`; no separate backend required
+- **Self-Hosted** – Runs entirely on Node.js; no separate backend required
 
 ## Quick Start
-
-### Local Development
 
 ```bash
 cd app
 npm install
 cp .env.local.example .env.local   # fill in your values
 npm run dev
-# Open http://localhost:12000
-```
-
-### Docker
-
-```bash
-docker-compose up -d
 # Open http://localhost:12000
 ```
 
@@ -46,7 +38,7 @@ Click the gear icon (bottom-right) to open Settings. The panel has four tabs:
 
 | Tab | What you configure |
 |-----|-------------------|
-| ⚙️ Settings | Weather ZIP code, units (°F/mph or °C/km/h), refresh interval, slideshow interval & shuffle, screensaver idle timeout, to-do auto-remove delay, dark/light theme |
+| ⚙️ Settings | Weather ZIP code, units (°F/mph or °C/km/h), refresh interval, slideshow interval & shuffle, screensaver idle timeout, motion sensor night hours & screen-off timeouts, to-do auto-remove delay, dark/light theme |
 | 📅 Calendars | Connect Google accounts via OAuth, sync calendar list, toggle individual calendars on/off |
 | 🖼️ Photos | Drag-and-drop photo upload; delete uploaded photos |
 | ✅ To-Do | Add/rename/delete lists and items; drag to reorder lists |
@@ -113,7 +105,8 @@ The layout is optimized for portrait orientation (taller than wide):
 1. Rotate your display to portrait mode
 2. Open the dashboard full-screen (F11)
 3. Disable screen sleep in your OS settings
-4. For Raspberry Pi, use Chromium kiosk mode (see [DEPLOYMENT.md](DEPLOYMENT.md))
+4. For Raspberry Pi kiosk mode, run `kiosk-setup.sh` — it configures Chromium to auto-launch fullscreen on boot via systemd
+5. If you have a PIR motion sensor on GPIO pin 17, run `scripts/motion-sensor-setup.sh` to install the optional motion sensor service
 
 ## Tech Stack
 
@@ -123,7 +116,7 @@ The layout is optimized for portrait orientation (taller than wide):
 - Open-Meteo API (weather, free, no key)
 - Zippopotam.us API (ZIP-to-coordinates, free, no key)
 - Google OAuth 2.0 with PKCE (calendar)
-- Docker + `vite preview` (production)
+- systemd + `vite preview` (production on Raspberry Pi)
 
 ## Architecture
 
@@ -151,14 +144,16 @@ Vite Server (Node.js — runs in dev and vite preview)
   ├── /api/ical              – proxies GCAL_ICAL_URL (server-side, avoids CORS)
   ├── /api/gcal/*            – proxies Google Calendar REST API (server-side, avoids CORS)
   ├── /api/auth/token        – exchanges OAuth code for tokens (uses GOOGLE_CLIENT_SECRET)
-  └── /api/auth/refresh      – refreshes OAuth access tokens
+  ├── /api/auth/refresh      – refreshes OAuth access tokens
+  └── /api/display-mode      – accepts POST from motion sensor script; broadcasts mode via SSE
+
+Motion Sensor (optional, scripts/motion_sensor.py)
+  └── Reads settings from /api/settings, POSTs to /api/display-mode, controls screen power via xset
 ```
 
 ## Documentation
 
 - **[Quick Start Guide](QUICKSTART.md)** – Get running in 5 minutes
-- **[Deployment Guide](DEPLOYMENT.md)** – Docker, Unraid, Raspberry Pi, reverse proxy
-- **[Unraid Docker Guide](UNRAID_DOCKER.md)** – Step-by-step Unraid setup
 - **[Development Guide](DEVELOPMENT.md)** – Project structure, adding widgets, contributing
 - **[Troubleshooting Guide](TROUBLESHOOTING.md)** – Common issues and solutions
 - **[FAQ](FAQ.md)** – Frequently asked questions

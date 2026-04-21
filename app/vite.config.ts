@@ -222,6 +222,39 @@ function photosPlugin(): Plugin {
   return { name: 'photos', configureServer: attach, configurePreviewServer: attach }
 }
 
+// ── Display mode plugin ───────────────────────────────────────────────────────
+// Accepts POST /api/display-mode from the motion sensor script and broadcasts
+// the mode change to all connected browser tabs via SSE.
+// Valid modes: "dashboard" | "screensaver"
+// Screen power (on/off) is handled directly by the Python script via xset.
+
+function displayModePlugin(): Plugin {
+  type Middleware = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void
+  const middleware: Middleware = (req, res, next) => {
+    if (req.url !== '/api/display-mode' || req.method !== 'POST') { next(); return }
+    let body = ''
+    req.on('data', (chunk: Buffer) => { body += chunk.toString() })
+    req.on('end', () => {
+      try {
+        const { mode } = JSON.parse(body) as { mode: string }
+        if (mode !== 'dashboard' && mode !== 'screensaver') {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end('{"error":"mode must be dashboard or screensaver"}')
+          return
+        }
+        broadcast(`display-mode:${mode}`)
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end('{"ok":true}')
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end('{"error":"invalid json"}')
+      }
+    })
+  }
+  const attach = (s: { middlewares: { use: (h: Middleware) => void } }) => { s.middlewares.use(middleware) }
+  return { name: 'display-mode', configureServer: attach, configurePreviewServer: attach }
+}
+
 // ── iCal proxy plugin ─────────────────────────────────────────────────────────
 
 function icalProxyPlugin(): Plugin {
@@ -365,7 +398,7 @@ export default defineConfig(({ mode }) => {
   Object.assign(process.env, env)
 
   return {
-    plugins: [react(), settingsPlugin(), todosPlugin(), photosPlugin(), icalProxyPlugin(), gcalProxyPlugin(), oauthPlugin()],
+    plugins: [react(), settingsPlugin(), todosPlugin(), photosPlugin(), displayModePlugin(), icalProxyPlugin(), gcalProxyPlugin(), oauthPlugin()],
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/__tests__/setup.ts'],

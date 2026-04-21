@@ -9,7 +9,7 @@ A self-hosted family dashboard that displays calendar events, weather, photos, a
 Yes. All APIs it uses are free for personal use (Open-Meteo for weather, Zippopotam.us for ZIP lookup, Google Calendar API free tier).
 
 ### Do I need coding experience?
-No coding experience is required to run it. If you can run `npm install && npm run dev` or `docker-compose up --build`, you're good.
+No coding experience is required to run it. If you can run `npm install && npm run dev`, you're good.
 
 ### What devices can I use?
 Any device with a modern browser: Raspberry Pi, old tablet, wall-mounted TV, laptop. Portrait orientation works best.
@@ -17,13 +17,10 @@ Any device with a modern browser: Raspberry Pi, old tablet, wall-mounted TV, lap
 ## Setup & Installation
 
 ### Do I need a server?
-For local use: just Node.js on your machine. For always-on display: a home server (Unraid, TrueNAS, Raspberry Pi, etc.) running Node.js or Docker.
-
-### Can I run it without Docker?
-Yes. `cd app && npm install && npm run dev` is all you need for development. See [DEVELOPMENT.md](DEVELOPMENT.md).
+For local use: just Node.js on your machine. For always-on display: a Raspberry Pi running Node.js with a systemd service.
 
 ### What port does it run on?
-Dev server and Docker: `http://localhost:12000` (configured in `vite.config.ts` and `docker-compose.yml`).
+`http://localhost:12000` (configured in `vite.config.ts`).
 
 ### Does it need a separate backend?
 No. The app runs as a single Node.js process using `vite preview`. All server-side routes (todos, settings, Google Calendar proxy, OAuth, photos, live sync) are handled by Vite plugins in the same process.
@@ -102,7 +99,7 @@ Check an item on the dashboard to mark it done. It stays visible for the configu
 Yes. On the dashboard, drag the **⠿** handle on a list column to move it. You can also reorder them in Settings → ✅ To-Do using the same drag handle.
 
 ### Are todos backed up?
-Yes. Every save writes to both `localStorage` and `app/data/todos.json` on the server. If your browser clears localStorage, the app restores from the server file on next load. In Docker, map `/app/data` to a persistent host path so it survives container updates.
+Yes. Every save writes to both `localStorage` and `app/data/todos.json` on the server. If your browser clears localStorage, the app restores from the server file on next load.
 
 ## Screensaver / Picture Frame Mode
 
@@ -154,6 +151,28 @@ After initial load:
 - Increase the slideshow interval (Settings → ⚙️ Settings → Interval)
 - Reduce the number of uploaded photos
 - Increase calendar/weather refresh intervals in Settings
+
+## Motion Sensor
+
+### Do I need a motion sensor?
+No. It's entirely optional. The dashboard and all other features work without one.
+
+### What hardware is required?
+A PIR (passive infrared) motion sensor wired to **GPIO pin 17** on your Raspberry Pi. The script uses the `gpiozero` Python library, which is standard on Raspberry Pi OS.
+
+### How do I set it up?
+Run `scripts/motion-sensor-setup.sh` on the Pi. It installs `gpiozero` if needed and creates a `fam-bam-motion` systemd service that starts automatically on boot.
+
+### What does the motion sensor do exactly?
+- **Day hours + motion** → wakes the screen and shows the full dashboard
+- **Night hours + motion** → wakes the screen and shows the picture frame screensaver (less jarring at 2am)
+- **No motion for configured timeout** → turns the screen off via `xset dpms`
+
+### How do I configure the night hours and timeouts?
+In the app: Settings → ⚙️ Settings → 🚶 Motion Sensor. Changes take effect within 60 seconds without restarting the script.
+
+### The motion sensor script says "not available" and exits
+Check that your sensor is wired to GPIO pin 17, the Pi has the GPIO header accessible, and `python3-gpiozero` is installed (`sudo apt-get install python3-gpiozero`).
 
 ## Still Have Questions?
 

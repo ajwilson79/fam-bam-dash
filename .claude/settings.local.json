@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm /c/Users/awils/fam-bam-dash/Dockerfile /c/Users/awils/fam-bam-dash/docker-compose.yml /c/Users/awils/fam-bam-dash/.dockerignore /c/Users/awils/fam-bam-dash/nginx.conf /c/Users/awils/fam-bam-dash/UNRAID_DOCKER.md /c/Users/awils/fam-bam-dash/DEPLOYMENT_CHECKLIST.md /c/Users/awils/fam-bam-dash/DEPLOYMENT.md /c/Users/awils/fam-bam-dash/build.sh /c/Users/awils/fam-bam-dash/build.ps1 /c/Users/awils/fam-bam-dash/setup.sh /c/Users/awils/fam-bam-dash/setup.ps1)",
+      "Bash(rm /c/Users/awils/fam-bam-dash/.github/workflows/docker-build.yml)",
+      "Bash(rmdir /c/Users/awils/fam-bam-dash/.github/workflows)",
+      "Bash(rmdir /c/Users/awils/fam-bam-dash/.github)",
+      "Bash(npm run *)",
+      "Bash(git add *)"
+    ]
+  }
+}
