@@ -212,9 +212,10 @@ read -r DO_ROTATE
 
 if [[ "$DO_ROTATE" =~ ^[Yy]$ ]]; then
     echo ""
-    echo "  Which direction does your display need to rotate?"
-    echo "    1) 90° clockwise     (right edge becomes bottom)"
-    echo "    2) 90° anticlockwise (left edge becomes bottom)"
+    echo "  Looking at your mounted portrait display:"
+    echo "  Where is the physical bottom of the monitor (ports, stand, logo)?"
+    echo "    1) On the LEFT  side"
+    echo "    2) On the RIGHT side"
     ask "  Choose [1/2]:"
     read -r ROTATE_DIR
 
@@ -243,9 +244,9 @@ if [[ "$DO_ROTATE" =~ ^[Yy]$ ]]; then
         fi
 
         if [[ "$ROTATE_DIR" == "2" ]]; then
-            TRANSFORM="270"   # 90° anticlockwise
+            TRANSFORM="90"    # physical bottom on right
         else
-            TRANSFORM="90"    # 90° clockwise
+            TRANSFORM="270"   # physical bottom on left
         fi
 
         ROTATE_CMD="wlr-randr --output ${OUTPUT_NAME} --transform ${TRANSFORM}"
@@ -266,9 +267,9 @@ if [[ "$DO_ROTATE" =~ ^[Yy]$ ]]; then
         [ -f "$CONFIG_FILE" ] || CONFIG_FILE="/boot/config.txt"
 
         if [[ "$ROTATE_DIR" == "2" ]]; then
-            ROTATE_VAL=3   # 270° = anticlockwise 90°
+            ROTATE_VAL=1   # physical bottom on right
         else
-            ROTATE_VAL=1   # 90° clockwise
+            ROTATE_VAL=3   # physical bottom on left
         fi
 
         if grep -q "^display_rotate=" "$CONFIG_FILE" 2>/dev/null; then
