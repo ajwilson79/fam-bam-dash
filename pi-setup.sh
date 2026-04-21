@@ -15,6 +15,12 @@ REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR="$REPO_DIR/app"
 SERVICE_FILE=/etc/systemd/system/fam-bam-dash.service
 CURRENT_USER="${SUDO_USER:-$USER}"
+AUTOSTART_FILE="$HOME/.config/labwc/autostart"
+
+# Detect Pi model — Pi 5 uses wlr-randr for rotation; Pi 4 and earlier use config.txt
+PI_MODEL=$(cat /proc/device-tree/model 2>/dev/null | tr -d '\0' || echo "unknown")
+IS_PI5=false
+echo "$PI_MODEL" | grep -q "Raspberry Pi 5" && IS_PI5=true
 
 # ── Colours ───────────────────────────────────────────────────────────────────
 
@@ -196,35 +202,89 @@ fi
 header "Step 6 of 7: Display Rotation"
 
 echo "  The dashboard is optimised for portrait (vertical) orientation."
+if [ "$IS_PI5" = true ]; then
+    echo "  Detected: ${PI_MODEL}"
+    echo "  Pi 5 uses wlr-randr (Wayland) — rotation is applied at session start."
+fi
+echo ""
 ask "  Rotate display to portrait mode? [y/N]:"
 read -r DO_ROTATE
 
 if [[ "$DO_ROTATE" =~ ^[Yy]$ ]]; then
     echo ""
     echo "  Which direction does your display need to rotate?"
-    echo "    1) 90° clockwise   (right edge becomes bottom)"
+    echo "    1) 90° clockwise     (right edge becomes bottom)"
     echo "    2) 90° anticlockwise (left edge becomes bottom)"
     ask "  Choose [1/2]:"
     read -r ROTATE_DIR
 
-    CONFIG_FILE="/boot/firmware/config.txt"
-    # Fallback for older Pi OS layout
-    [ -f "$CONFIG_FILE" ] || CONFIG_FILE="/boot/config.txt"
+    if [ "$IS_PI5" = true ]; then
+        # ── Pi 5: wlr-randr via Wayland ───────────────────────────────────────
+        # display_rotate in config.txt does not work on Pi 5.
+        # Instead, wlr-randr sets rotation inside the Wayland session,
+        # so we prepend it to the labwc autostart before Chromium launches.
 
-    if [[ "$ROTATE_DIR" == "2" ]]; then
-        ROTATE_VAL=3   # 270° = anticlockwise 90°
+        if ! command -v wlr-randr &>/dev/null; then
+            step "Installing wlr-randr..."
+            sudo apt-get install -y wlr-randr >/dev/null
+            ok "wlr-randr installed."
+        fi
+
+        echo ""
+        echo "  What display connection are you using?"
+        echo "    1) HDMI (default — micro-HDMI port 1)"
+        echo "    2) Official Raspberry Pi touchscreen (DSI)"
+        ask "  Choose [1/2]:"
+        read -r DISPLAY_TYPE
+        if [[ "$DISPLAY_TYPE" == "2" ]]; then
+            OUTPUT_NAME="DSI-1"
+        else
+            OUTPUT_NAME="HDMI-A-1"
+        fi
+
+        if [[ "$ROTATE_DIR" == "2" ]]; then
+            TRANSFORM="270"   # 90° anticlockwise
+        else
+            TRANSFORM="90"    # 90° clockwise
+        fi
+
+        ROTATE_CMD="wlr-randr --output ${OUTPUT_NAME} --transform ${TRANSFORM}"
+
+        if [ -f "$AUTOSTART_FILE" ]; then
+            # Insert rotation command before the chromium launch line
+            sed -i "/^chromium/i ${ROTATE_CMD}" "$AUTOSTART_FILE"
+            ok "Rotation added to kiosk autostart: ${ROTATE_CMD}"
+        else
+            warn "Kiosk autostart not found at ${AUTOSTART_FILE}."
+            warn "Add this line manually before the Chromium entry:"
+            echo "  ${ROTATE_CMD}"
+        fi
+
     else
-        ROTATE_VAL=1   # 90° clockwise
+        # ── Pi 4 and earlier: display_rotate in config.txt ────────────────────
+        CONFIG_FILE="/boot/firmware/config.txt"
+        [ -f "$CONFIG_FILE" ] || CONFIG_FILE="/boot/config.txt"
+
+        if [[ "$ROTATE_DIR" == "2" ]]; then
+            ROTATE_VAL=3   # 270° = anticlockwise 90°
+        else
+            ROTATE_VAL=1   # 90° clockwise
+        fi
+
+        if grep -q "^display_rotate=" "$CONFIG_FILE" 2>/dev/null; then
+            sudo sed -i "s/^display_rotate=.*/display_rotate=${ROTATE_VAL}/" "$CONFIG_FILE"
+        else
+            echo "display_rotate=${ROTATE_VAL}" | sudo tee -a "$CONFIG_FILE" > /dev/null
+        fi
+        ok "Display rotation set in ${CONFIG_FILE} (takes effect after reboot)."
     fi
 
-    if grep -q "^display_rotate=" "$CONFIG_FILE" 2>/dev/null; then
-        sudo sed -i "s/^display_rotate=.*/display_rotate=${ROTATE_VAL}/" "$CONFIG_FILE"
-    else
-        echo "display_rotate=${ROTATE_VAL}" | sudo tee -a "$CONFIG_FILE" > /dev/null
-    fi
-    ok "Display rotation set (takes effect after reboot)."
 else
-    ok "Skipped — you can rotate later via /boot/firmware/config.txt (display_rotate=1 or 3)."
+    if [ "$IS_PI5" = true ]; then
+        ok "Skipped — add 'wlr-randr --output HDMI-A-1 --transform 90' to ${AUTOSTART_FILE} if needed later."
+    else
+        ok "Skipped — add 'display_rotate=1' to /boot/firmware/config.txt if needed later."
+    fi
 fi
 
 # ── Step 7: Motion sensor ─────────────────────────────────────────────────────
