@@ -48,8 +48,9 @@ echo "  2. Configure app/.env.local (API keys, timezone)"
 echo "  3. Build the app"
 echo "  4. Install fam-bam-dash as a systemd service"
 echo "  5. Set up Chromium kiosk mode"
-echo "  6. Optionally configure portrait display rotation"
-echo "  7. Optionally set up the PIR motion sensor service"
+echo "  6. Set up boot splash screen and session wallpaper"
+echo "  7. Optionally configure portrait display rotation"
+echo "  8. Optionally set up the PIR motion sensor service"
 echo ""
 ask "Continue? [Y/n]:"
 read -r REPLY
@@ -197,9 +198,24 @@ else
     bash "$KIOSK_SCRIPT"
 fi
 
-# ── Step 6: Portrait rotation ─────────────────────────────────────────────────
+# ── Step 6: Splash screen and wallpaper ──────────────────────────────────────
 
-header "Step 6 of 7: Display Rotation"
+header "Step 6 of 8: Boot Splash & Wallpaper"
+
+SPLASH_SCRIPT="$REPO_DIR/scripts/splash-setup.sh"
+if [ ! -f "$SPLASH_SCRIPT" ]; then
+    warn "scripts/splash-setup.sh not found — skipping."
+elif [ ! -f "$REPO_DIR/assets/splash-boot.png" ] && [ ! -f "$REPO_DIR/assets/splash.png" ]; then
+    warn "No images found in assets/ — skipping splash setup."
+    warn "Add assets/splash-boot.png (boot) and assets/splash.png (wallpaper) and re-run to configure."
+else
+    chmod +x "$SPLASH_SCRIPT"
+    bash "$SPLASH_SCRIPT"
+fi
+
+# ── Step 7: Portrait rotation ─────────────────────────────────────────────────
+
+header "Step 7 of 8: Display Rotation"
 
 echo "  The dashboard is optimised for portrait (vertical) orientation."
 if [ "$IS_PI5" = true ]; then
@@ -288,9 +304,9 @@ else
     fi
 fi
 
-# ── Step 7: Motion sensor ─────────────────────────────────────────────────────
+# ── Step 8: Motion sensor ─────────────────────────────────────────────────────
 
-header "Step 7 of 7: Motion Sensor (optional)"
+header "Step 8 of 8: Motion Sensor (optional)"
 
 echo "  A PIR motion sensor on GPIO pin 17 can wake the screen on motion,"
 echo "  switch between dashboard and picture frame modes by time of day,"
