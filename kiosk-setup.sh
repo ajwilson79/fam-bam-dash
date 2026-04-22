@@ -153,7 +153,4 @@ echo ""
 echo "To change the URL later, edit: $AUTOSTART_FILE"
 echo "To disable kiosk mode, delete: $AUTOSTART_FILE"
 echo ""
-read -p "Reboot now? [y/N]: " REBOOT
-if [[ "$REBOOT" =~ ^[Yy]$ ]]; then
-    sudo reboot
-fi
+echo "Reboot when ready to start the kiosk."
