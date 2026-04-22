@@ -491,5 +491,12 @@ export default defineConfig(({ mode }) => {
       cors: true,
       headers: { 'Access-Control-Allow-Origin': '*' },
     },
+    preview: {
+      host: true,
+      port: 12000,
+      strictPort: true,
+      cors: true,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+    },
   }
 })
