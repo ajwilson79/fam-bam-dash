@@ -96,6 +96,7 @@ $CHROMIUM_BIN \\
   --no-first-run \\
   --disable-restore-session-state \\
   --disable-session-crashed-bubble \\
+  --password-store=basic \\
   "$KIOSK_URL"
 EOF
 
