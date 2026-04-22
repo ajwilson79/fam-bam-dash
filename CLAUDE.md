@@ -125,6 +125,6 @@ Manage with a systemd service (see conversation history for an example unit file
 
 `kiosk-setup.sh` configures Chromium kiosk mode (called by `pi-setup.sh`, can also be run standalone).
 
-`scripts/splash-setup.sh` installs the Plymouth boot splash (using `assets/splash-boot.png`) and sets the Wayland session wallpaper via `wbg` (using `assets/splash.png`). Can be run standalone. `assets/splash-boot.png` should be pre-rotated to appear correctly during boot (before the OS applies display rotation); `assets/splash.png` is in normal orientation.
+`scripts/splash-setup.sh` installs the Plymouth boot splash (using `assets/splash-boot.png`) and sets the Wayland session wallpaper via `swaybg` (using `assets/splash.png`). Can be run standalone. `assets/splash-boot.png` should be pre-rotated to appear correctly during boot (before the OS applies display rotation); `assets/splash.png` is in normal orientation.
 
 `scripts/motion-sensor-setup.sh` is optional — installs the `fam-bam-motion` systemd service. Only needed when a PIR sensor is wired to GPIO pin 17.

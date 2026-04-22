@@ -3,7 +3,7 @@
 #
 # - Plymouth theme: shows assets/splash-boot.png during boot (pre-rotated,
 #   displayed before the OS handles display rotation)
-# - Session wallpaper: shows assets/splash.png via wbg in the labwc session
+# - Session wallpaper: shows assets/splash.png via swaybg in the labwc session
 #   (displayed after Wayland starts, while the dashboard app is loading)
 #
 # Called automatically by pi-setup.sh, or run standalone:
@@ -82,12 +82,12 @@ EOF
     ok "Plymouth theme set — splash-boot.png will show on next boot."
 fi
 
-# ── Session wallpaper (wbg) ───────────────────────────────────────────────────
+# ── Session wallpaper (swaybg) ───────────────────────────────────────────────
 
 if [ "${SKIP_WALLPAPER:-false}" = false ]; then
-    step "Installing wbg (Wayland wallpaper)..."
-    sudo apt-get install -y wbg >/dev/null
-    ok "wbg installed."
+    step "Installing swaybg (Wayland wallpaper)..."
+    sudo apt-get install -y swaybg >/dev/null
+    ok "swaybg installed."
 
     # Copy wallpaper to a stable system path so the autostart reference doesn't
     # break if the repo is moved
@@ -96,23 +96,24 @@ if [ "${SKIP_WALLPAPER:-false}" = false ]; then
     sudo cp "$WALL_IMAGE" "$WALLPAPER_DEST"
 
     if [ -f "$AUTOSTART_FILE" ]; then
-        # Remove any existing wbg line to avoid duplicates on re-run
+        # Remove any existing swaybg/wbg lines to avoid duplicates on re-run
+        sed -i '/^swaybg /d' "$AUTOSTART_FILE"
         sed -i '/^wbg /d' "$AUTOSTART_FILE"
 
-        # Insert wbg as the first line (before display rotation and Chromium)
-        # so the wallpaper is set as early as possible in the session
-        sed -i "1i wbg $WALLPAPER_DEST &" "$AUTOSTART_FILE"
+        # Insert swaybg as the first line (before display rotation and Chromium)
+        # -m center: native size centred on black — no stretching
+        sed -i "1i swaybg -i $WALLPAPER_DEST -m center &" "$AUTOSTART_FILE"
         ok "Wallpaper added to kiosk autostart."
     else
         warn "Kiosk autostart not found at $AUTOSTART_FILE."
         warn "Add this line manually at the top of your autostart:"
-        echo "  wbg $WALLPAPER_DEST &"
+        echo "  swaybg -i $WALLPAPER_DEST -m center &"
     fi
 fi
 
 echo ""
 echo -e "${GREEN}${BOLD}Splash setup complete.${RESET}"
 echo "  Boot splash:  assets/splash-boot.png → Plymouth (visible during boot)"
-echo "  Wallpaper:    assets/splash.png → wbg (visible while dashboard loads)"
+echo "  Wallpaper:    assets/splash.png → swaybg (visible while dashboard loads)"
 echo ""
 echo "To update images later, replace the files in assets/ and re-run this script."

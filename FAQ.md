@@ -158,7 +158,7 @@ After initial load:
 Yes. Place your image at `assets/splash-boot.png` in the repo and run `scripts/splash-setup.sh` (or re-run `pi-setup.sh`). The script installs a Plymouth theme that centres and scales the image on a black background during boot. Because Plymouth runs before the OS applies display rotation, `splash-boot.png` should be pre-rotated to appear correctly on your portrait display.
 
 ### Can I show a custom image while the dashboard is loading?
-Yes. Place your image at `assets/splash.png` and run `scripts/splash-setup.sh`. The script installs `wbg` (a Wayland wallpaper tool) and adds it to the labwc autostart so the wallpaper appears as soon as the Wayland session starts — before Chromium opens. This image should be in normal (un-rotated) orientation, since the OS handles rotation at this point.
+Yes. Place your image at `assets/splash.png` and run `scripts/splash-setup.sh`. The script installs `swaybg` (a Wayland wallpaper tool) and adds it to the labwc autostart so the wallpaper appears as soon as the Wayland session starts — before Chromium opens. This image should be in normal (un-rotated) orientation, since the OS handles rotation at this point.
 
 ### How are the two splash images different?
 | Image | File | When shown | Orientation |
