@@ -142,6 +142,31 @@ npm run dev
 ### Server-side variables not available
 Variables without the `VITE_` prefix (e.g. `GOOGLE_CLIENT_SECRET`, `GCAL_ICAL_URL`) are only available in Vite server plugins, not in the browser bundle. If a server endpoint is returning errors, verify these are set **without** the `VITE_` prefix.
 
+## Display Rotation (Raspberry Pi)
+
+### Image is rotated 180° from where it should be (upside-down portrait)
+The digital transform direction and your physical rotation direction didn't match. Swap `90` ↔ `270` in the labwc autostart:
+
+```bash
+sed -i 's/--transform 90/--transform 270/' ~/.config/labwc/autostart
+# or if it was set to 270:
+sed -i 's/--transform 270/--transform 90/' ~/.config/labwc/autostart
+```
+
+Log out and back in to apply — no reboot needed.
+
+### How do I know which transform value to use?
+A physical anticlockwise rotation (bottom of monitor on the right) requires `--transform 90`. A physical clockwise rotation (bottom of monitor on the left) requires `--transform 270`. If the image is wrong, swap them — it takes 30 seconds to fix.
+
+### Image is correct but touch is offset (Pi 5 / Wayland)
+Touch input usually follows the display rotation automatically on Wayland. If it doesn't, see the libinput calibration section — run `libinput list-devices | grep -A5 -i touch` and bring the output to the troubleshooting chat.
+
+### display_rotate in config.txt has no effect (Pi 5)
+`display_rotate` is not supported on Pi 5. Use `wlr-randr` instead. The `pi-setup.sh` script handles this automatically by detecting the Pi model. If you set it up manually, add this line to `~/.config/labwc/autostart` before the Chromium entry:
+```bash
+wlr-randr --output HDMI-A-1 --transform 90
+```
+
 ## Motion Sensor (optional hardware)
 
 ### Script exits immediately with "Motion sensor not available"
