@@ -269,9 +269,9 @@ if [[ "$DO_ROTATE" =~ ^[Yy]$ ]]; then
         fi
 
         if [[ "$ROTATE_DIR" == "2" ]]; then
-            TRANSFORM="90"    # physical bottom on right
+            TRANSFORM="270"   # physical bottom on right
         else
-            TRANSFORM="270"   # physical bottom on left
+            TRANSFORM="90"    # physical bottom on left
         fi
 
         ROTATE_CMD="wlr-randr --output ${OUTPUT_NAME} --transform ${TRANSFORM}"

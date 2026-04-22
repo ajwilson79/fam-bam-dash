@@ -156,7 +156,7 @@ sed -i 's/--transform 270/--transform 90/' ~/.config/labwc/autostart
 Log out and back in to apply — no reboot needed.
 
 ### How do I know which transform value to use?
-A physical anticlockwise rotation (bottom of monitor on the right) requires `--transform 90`. A physical clockwise rotation (bottom of monitor on the left) requires `--transform 270`. If the image is wrong, swap them — it takes 30 seconds to fix.
+A physical anticlockwise rotation (bottom of monitor on the right) requires `--transform 270`. A physical clockwise rotation (bottom of monitor on the left) requires `--transform 90`. If the image is wrong, swap them — it takes 30 seconds to fix.
 
 ### Image is correct but touch is offset (Pi 5 / Wayland)
 Touch input usually follows the display rotation automatically on Wayland. If it doesn't, see the libinput calibration section — run `libinput list-devices | grep -A5 -i touch` and bring the output to the troubleshooting chat.
