@@ -81,7 +81,11 @@ if command -v node &>/dev/null; then
 fi
 
 if [ "$NODE_OK" = false ]; then
-    step "Installing Node.js 20 via NodeSource..."
+    step "Installing system dependencies..."
+sudo apt-get install -y fonts-noto-color-emoji curl >/dev/null
+ok "System dependencies installed."
+
+step "Installing Node.js 20 via NodeSource..."
     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - >/dev/null
     sudo apt-get install -y nodejs >/dev/null
     ok "Node.js $(node --version) installed."
