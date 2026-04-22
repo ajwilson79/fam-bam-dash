@@ -70,15 +70,10 @@ screen_height   = Window.GetHeight();
 img_width       = wallpaper_image.GetWidth();
 img_height      = wallpaper_image.GetHeight();
 
-# Scale to fill the screen while preserving aspect ratio
-scale = Math.Max(screen_width  / img_width,
-                 screen_height / img_height);
-scaled = wallpaper_image.Scale(Math.Int(img_width  * scale),
-                                Math.Int(img_height * scale));
-
-sprite = Sprite(scaled);
-sprite.SetX(Math.Int((screen_width  - scaled.GetWidth())  / 2));
-sprite.SetY(Math.Int((screen_height - scaled.GetHeight()) / 2));
+# Display at native size, centred on a black background — no scaling
+sprite = Sprite(wallpaper_image);
+sprite.SetX(Math.Int((screen_width  - img_width)  / 2));
+sprite.SetY(Math.Int((screen_height - img_height) / 2));
 sprite.SetZ(-100);
 EOF
 
