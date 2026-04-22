@@ -489,6 +489,7 @@ export default defineConfig(({ mode }) => {
       port: 12000,
       strictPort: true,
       cors: true,
+      allowedHosts: 'all',
       headers: { 'Access-Control-Allow-Origin': '*' },
     },
     preview: {
@@ -496,6 +497,7 @@ export default defineConfig(({ mode }) => {
       port: 12000,
       strictPort: true,
       cors: true,
+      allowedHosts: 'all',
       headers: { 'Access-Control-Allow-Origin': '*' },
     },
   }
