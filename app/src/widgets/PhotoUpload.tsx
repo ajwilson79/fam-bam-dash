@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { notifyPhotosChanged } from '../lib/photos'
+import { adminHeaders } from '../lib/admin'
 
 type UploadedFile = { name: string; url: string }
 type UploadProgress = { name: string; done: boolean; error?: string }
@@ -33,7 +34,7 @@ export default function PhotoUpload() {
       try {
         const res = await fetch(`/api/photos/upload?name=${encodeURIComponent(file.name)}`, {
           method: 'POST',
-          headers: { 'Content-Type': file.type },
+          headers: { 'Content-Type': file.type, ...adminHeaders() },
           body: file,
         })
         setProgress(p => p.map((x, idx) => idx === i ? { ...x, done: true, error: res.ok ? undefined : `HTTP ${res.status}` } : x))
@@ -48,7 +49,7 @@ export default function PhotoUpload() {
   }
 
   async function deletePhoto(name: string) {
-    await fetch(`/api/photos/delete?name=${encodeURIComponent(name)}`, { method: 'POST' })
+    await fetch(`/api/photos/delete?name=${encodeURIComponent(name)}`, { method: 'POST', headers: adminHeaders() })
     await fetchList()
     notifyPhotosChanged()
   }

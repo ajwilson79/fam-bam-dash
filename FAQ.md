@@ -152,6 +152,40 @@ After initial load:
 - Reduce the number of uploaded photos
 - Increase calendar/weather refresh intervals in Settings
 
+## Boot Splash & Wallpaper
+
+### Can I show a custom image while the Pi is booting?
+Yes. Place your image at `assets/splash-boot.png` in the repo and run `scripts/splash-setup.sh` (or re-run `pi-setup.sh`). The script installs a Plymouth theme that centres and scales the image on a black background during boot. Because Plymouth runs before the OS applies display rotation, `splash-boot.png` should be pre-rotated to appear correctly on your portrait display.
+
+### Can I show a custom image while the dashboard is loading?
+Yes. Place your image at `assets/splash.png` and run `scripts/splash-setup.sh`. The script installs `wbg` (a Wayland wallpaper tool) and adds it to the labwc autostart so the wallpaper appears as soon as the Wayland session starts — before Chromium opens. This image should be in normal (un-rotated) orientation, since the OS handles rotation at this point.
+
+### How are the two splash images different?
+| Image | File | When shown | Orientation |
+|-------|------|-----------|-------------|
+| Boot splash | `assets/splash-boot.png` | During OS boot (Plymouth, pre-rotation) | Pre-rotated |
+| Session wallpaper | `assets/splash.png` | After Wayland starts, while dashboard loads | Normal |
+
+### How do I update the splash images after initial setup?
+Replace the files in `assets/` and re-run `scripts/splash-setup.sh`. The script copies updated images to their installed locations and deduplicates autostart entries on re-run.
+
+## Admin PIN
+
+### What is the admin PIN?
+A PIN that gates admin actions — opening Settings, uploading or deleting photos, and connecting Google accounts. The dashboard (clock, weather, calendar, photos, checking off todos) works without it, so a kiosk user can keep using the display normally.
+
+### How do I set the PIN?
+Add `FAM_BAM_ADMIN_PIN=1234` (any value you choose) to `app/.env.local` and restart the server. Leaving it blank — or omitting the line entirely — disables the PIN.
+
+### I entered the PIN once, do I have to enter it again?
+Only if you switch devices, clear the browser's localStorage, or change the PIN in `.env.local`. Each device that unlocks Settings stores the PIN locally.
+
+### I forgot my PIN
+Edit `app/.env.local` on the Pi and change `FAM_BAM_ADMIN_PIN` to a new value. Restart the server. On any device that had the old PIN stored, you'll be prompted for the new one next time you click ⚙.
+
+### Does the PIN encrypt anything?
+No. It's a shared-secret check on admin API endpoints — fine for protecting a household dashboard against accidental taps and casual LAN tampering, not a defence against a determined attacker on your network. For stronger isolation, put the app behind Tailscale or bind it to localhost.
+
 ## Motion Sensor
 
 ### Do I need a motion sensor?

@@ -70,9 +70,18 @@ VITE_TIMEZONE=America/New_York
 # Weather location fallback (used before a ZIP is entered in Settings)
 VITE_LAT=37.7749
 VITE_LON=-122.4194
+
+# Admin PIN — gates Settings, photo upload/delete, and OAuth. Blank = disabled.
+FAM_BAM_ADMIN_PIN=
 ```
 
-Variables **without** the `VITE_` prefix (e.g. `GOOGLE_CLIENT_SECRET`, `GCAL_ICAL_URL`) are server-side only and are never bundled into the browser build.
+Variables **without** the `VITE_` prefix (e.g. `GOOGLE_CLIENT_SECRET`, `GCAL_ICAL_URL`, `FAM_BAM_ADMIN_PIN`) are server-side only and are never bundled into the browser build.
+
+### Admin PIN
+
+`FAM_BAM_ADMIN_PIN` gates the admin surface of the app — opening Settings, uploading or deleting photos, and connecting Google accounts. The dashboard itself (calendar, weather, photos, checking off to-do items) stays open so anyone walking up to the kiosk can still use it normally.
+
+When set, clicking the ⚙ gear prompts for the PIN once per device; the browser remembers it for future visits. Leave blank in `.env.local` to disable.
 
 ### Google Calendar Setup
 
@@ -107,7 +116,7 @@ chmod +x pi-setup.sh
 ./pi-setup.sh
 ```
 
-This installs Node.js 20, walks through `app/.env.local` configuration, builds the app, installs it as a systemd service, sets up Chromium kiosk mode, optionally rotates the display to portrait, and optionally installs the PIR motion sensor service.
+This installs Node.js 20, walks through `app/.env.local` configuration, builds the app, installs it as a systemd service, sets up Chromium kiosk mode, configures a Plymouth boot splash and session wallpaper (if images are present in `assets/`), optionally rotates the display to portrait, and optionally installs the PIR motion sensor service.
 
 ## Display Setup (non-Pi)
 

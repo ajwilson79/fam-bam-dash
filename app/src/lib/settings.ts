@@ -1,3 +1,5 @@
+import { adminHeaders } from './admin'
+
 export type Settings = {
   weather: { zip: string; lat: number; lon: number; refreshIntervalMs: number; units: 'imperial' | 'metric' }
   calendar: { calendarId: string; maxEvents: number; refreshIntervalMs: number }
@@ -153,12 +155,12 @@ export function setSettings(s: Settings) {
     localStorage.setItem(KEY, JSON.stringify(s))
     fetch('/api/settings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Tab-Id': getTabId() },
+      headers: { 'Content-Type': 'application/json', 'X-Tab-Id': getTabId(), ...adminHeaders() },
       body: JSON.stringify(s),
-    }).catch(() => { /* best-effort */ })
+    }).catch(() => { /* best-effort: dashboard theme toggle 401s silently without PIN, that's fine */ })
   } finally {
     listeners.forEach((fn) => {
-      try { fn() } catch {}
+      try { fn() } catch { /* ignore subscriber errors */ }
     })
   }
 }

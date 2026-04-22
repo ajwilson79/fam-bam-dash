@@ -101,6 +101,7 @@ Defined in `app/.env.local` (gitignored). Use `app/.env.example` as a template.
 | `VITE_TIMEZONE` | Browser | Calendar display timezone |
 | `GCAL_ICAL_URL` | Server only | iCal feed URL (proxied to avoid CORS) |
 | `VITE_GOOGLE_PHOTOS_ALBUM_ID` | Browser | Google Photos album |
+| `FAM_BAM_ADMIN_PIN` | Server only | If set, gates admin mutations (settings write, photo upload/delete, OAuth token exchange) behind an `X-Admin-Pin` header. Dashboard reads and todo writes stay open. Blank = disabled. |
 
 ## Adding Features
 
@@ -120,8 +121,10 @@ Run `npm run build` then `npm run preview` — `vite preview` serves `dist/` and
 
 Manage with a systemd service (see conversation history for an example unit file). Persistent data lives in `app/data/` (settings + todos) and `app/public/uploads/` (photos) — back these up.
 
-`pi-setup.sh` is the single entry point for a full Pi install — Node.js, build, app service, kiosk mode, display rotation, and optional motion sensor, all in one script.
+`pi-setup.sh` is the single entry point for a full Pi install — Node.js, build, app service, kiosk mode, boot splash, session wallpaper, display rotation, and optional motion sensor, all in one script.
 
 `kiosk-setup.sh` configures Chromium kiosk mode (called by `pi-setup.sh`, can also be run standalone).
+
+`scripts/splash-setup.sh` installs the Plymouth boot splash (using `assets/splash-boot.png`) and sets the Wayland session wallpaper via `wbg` (using `assets/splash.png`). Can be run standalone. `assets/splash-boot.png` should be pre-rotated to appear correctly during boot (before the OS applies display rotation); `assets/splash.png` is in normal orientation.
 
 `scripts/motion-sensor-setup.sh` is optional — installs the `fam-bam-motion` systemd service. Only needed when a PIR sensor is wired to GPIO pin 17.

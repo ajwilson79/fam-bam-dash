@@ -44,13 +44,14 @@ header "Fam Bam Dash — Raspberry Pi Setup"
 echo ""
 echo "This script will:"
 echo "  1. Install Node.js 20"
-echo "  2. Configure app/.env.local (API keys, timezone)"
+echo "  2. Configure app/.env.local (API keys, timezone, admin PIN)"
 echo "  3. Build the app"
 echo "  4. Install fam-bam-dash as a systemd service"
 echo "  5. Set up Chromium kiosk mode"
 echo "  6. Set up boot splash screen and session wallpaper"
 echo "  7. Optionally configure portrait display rotation"
 echo "  8. Optionally set up the PIR motion sensor service"
+echo "  9. Optionally set up a weekly reboot schedule"
 echo ""
 ask "Continue? [Y/n]:"
 read -r REPLY
@@ -66,7 +67,7 @@ fi
 
 # ── Step 1: Node.js ───────────────────────────────────────────────────────────
 
-header "Step 1 of 7: Node.js"
+header "Step 1 of 9: Node.js"
 
 NODE_OK=false
 if command -v node &>/dev/null; then
@@ -88,7 +89,7 @@ fi
 
 # ── Step 2: Configure .env.local ─────────────────────────────────────────────
 
-header "Step 2 of 7: Environment Variables"
+header "Step 2 of 9: Environment Variables"
 
 ENV_FILE="$APP_DIR/.env.local"
 
@@ -113,6 +114,11 @@ if [ "${SKIP_ENV:-false}" = false ]; then
     ask "  Google Calendar iCal URL (GCAL_ICAL_URL) [optional]:"; read -r GICAL_URL
     ask "  Timezone (VITE_TIMEZONE) [America/New_York]:"; read -r TIMEZONE
     TIMEZONE="${TIMEZONE:-America/New_York}"
+    echo ""
+    echo "  Admin PIN — required to open Settings, upload/delete photos, or connect"
+    echo "  Google accounts. The dashboard itself works without it (clock, weather,"
+    echo "  calendar, checking off todos). Recommended."
+    ask "  Admin PIN (FAM_BAM_ADMIN_PIN) [leave blank to disable]:"; read -r ADMIN_PIN
 
     cat > "$ENV_FILE" << EOF
 # Google OAuth — required for Calendar OAuth and Google Photos
@@ -125,6 +131,9 @@ GCAL_ICAL_URL=${GICAL_URL}
 # Timezone for calendar display
 VITE_TIMEZONE=${TIMEZONE}
 
+# Admin PIN — gates Settings, photo upload/delete, and OAuth. Blank disables.
+FAM_BAM_ADMIN_PIN=${ADMIN_PIN}
+
 # Fallback weather coordinates — enter your ZIP in the app instead
 VITE_LAT=37.7749
 VITE_LON=-122.4194
@@ -134,7 +143,7 @@ fi
 
 # ── Step 3: Build ─────────────────────────────────────────────────────────────
 
-header "Step 3 of 7: Build"
+header "Step 3 of 9: Build"
 
 step "Installing npm dependencies..."
 cd "$APP_DIR"
@@ -148,7 +157,7 @@ cd "$REPO_DIR"
 
 # ── Step 4: App systemd service ───────────────────────────────────────────────
 
-header "Step 4 of 7: App Service"
+header "Step 4 of 9: App Service"
 
 if [ -f "$SERVICE_FILE" ]; then
     warn "fam-bam-dash service already exists — reinstalling."
@@ -188,7 +197,7 @@ fi
 
 # ── Step 5: Kiosk mode ────────────────────────────────────────────────────────
 
-header "Step 5 of 7: Kiosk Mode"
+header "Step 5 of 9: Kiosk Mode"
 
 KIOSK_SCRIPT="$REPO_DIR/kiosk-setup.sh"
 if [ ! -f "$KIOSK_SCRIPT" ]; then
@@ -200,7 +209,7 @@ fi
 
 # ── Step 6: Splash screen and wallpaper ──────────────────────────────────────
 
-header "Step 6 of 8: Boot Splash & Wallpaper"
+header "Step 6 of 9: Boot Splash & Wallpaper"
 
 SPLASH_SCRIPT="$REPO_DIR/scripts/splash-setup.sh"
 if [ ! -f "$SPLASH_SCRIPT" ]; then
@@ -215,7 +224,7 @@ fi
 
 # ── Step 7: Portrait rotation ─────────────────────────────────────────────────
 
-header "Step 7 of 8: Display Rotation"
+header "Step 7 of 9: Display Rotation"
 
 echo "  The dashboard is optimised for portrait (vertical) orientation."
 if [ "$IS_PI5" = true ]; then
@@ -306,7 +315,7 @@ fi
 
 # ── Step 8: Motion sensor ─────────────────────────────────────────────────────
 
-header "Step 8 of 8: Motion Sensor (optional)"
+header "Step 8 of 9: Motion Sensor (optional)"
 
 echo "  A PIR motion sensor on GPIO pin 17 can wake the screen on motion,"
 echo "  switch between dashboard and picture frame modes by time of day,"
@@ -325,6 +334,28 @@ if [[ "$HAS_SENSOR" =~ ^[Yy]$ ]]; then
     fi
 else
     ok "Skipped — you can run scripts/motion-sensor-setup.sh later if you add a sensor."
+fi
+
+# ── Step 9: Reboot schedule ───────────────────────────────────────────────────
+
+header "Step 9 of 9: Reboot Schedule (optional)"
+
+echo "  A weekly scheduled reboot keeps the Pi healthy on long kiosk runs."
+echo "  This also verifies all services are set to restart on boot."
+echo ""
+ask "  Set up a weekly reboot schedule? [Y/n]:"
+read -r DO_SCHEDULE
+
+if [[ -z "$DO_SCHEDULE" || "$DO_SCHEDULE" =~ ^[Yy]$ ]]; then
+    SCHED_SCRIPT="$REPO_DIR/scripts/reboot-schedule.sh"
+    if [ ! -f "$SCHED_SCRIPT" ]; then
+        warn "scripts/reboot-schedule.sh not found — skipping."
+    else
+        chmod +x "$SCHED_SCRIPT"
+        bash "$SCHED_SCRIPT"
+    fi
+else
+    ok "Skipped — run scripts/reboot-schedule.sh later to configure."
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────

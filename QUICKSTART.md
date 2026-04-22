@@ -106,5 +106,6 @@ npm run preview
 | Screensaver never activates | Check Settings → ⚙️ Settings → 💤 Screensaver — make sure it's enabled |
 | Settings reset on reload | Settings are also server-persisted; make sure the server is running |
 | OAuth redirect fails | Check the redirect URI in Google Cloud Console matches `http://localhost:12000` exactly |
+| Boot splash image rotated wrong | `assets/splash-boot.png` must be pre-rotated — Plymouth runs before OS rotation is applied |
 
 See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more detail.

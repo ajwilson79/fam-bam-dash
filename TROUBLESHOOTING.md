@@ -167,6 +167,19 @@ Touch input usually follows the display rotation automatically on Wayland. If it
 wlr-randr --output HDMI-A-1 --transform 90
 ```
 
+## Admin PIN
+
+### Settings won't open — PIN prompt keeps rejecting me
+- Make sure `FAM_BAM_ADMIN_PIN` in `app/.env.local` matches what you're typing (including any leading/trailing spaces — they're trimmed server-side, but worth checking).
+- Restart the server after editing `.env.local`. Vite only reads env vars at startup.
+- If you changed the PIN recently, clear the stored value on this device: open DevTools → Application → Local Storage → delete `fam-bam-admin-pin`, then try again.
+
+### I want to disable the PIN
+Set `FAM_BAM_ADMIN_PIN=` (blank) in `app/.env.local` and restart. The server then accepts any request.
+
+### Dashboard theme toggle seems to ignore me on some devices
+The theme toggle writes settings to the server, which requires the PIN. Without it, the server silently 401s and the theme still changes on the current device (stored in localStorage) — it just won't sync to other devices until you open Settings with the PIN.
+
 ## Motion Sensor (optional hardware)
 
 ### Script exits immediately with "Motion sensor not available"

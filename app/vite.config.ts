@@ -59,6 +59,29 @@ function broadcast(event: string) {
   }
 }
 
+// ── Admin PIN gate (shared by settings, photos, oauth plugins) ────────────────
+// FAM_BAM_ADMIN_PIN gates admin-only mutations (settings writes, photo
+// upload/delete, OAuth token exchange). If the env var is unset, checkPin()
+// allows everything — backward compatible for local dev and existing installs.
+
+function getAdminPin(): string {
+  return (process.env.FAM_BAM_ADMIN_PIN ?? '').trim()
+}
+
+/**
+ * Returns true if the request may proceed.
+ * If a PIN is configured and the header doesn't match, writes a 401 to res and returns false.
+ */
+function checkPin(req: http.IncomingMessage, res: http.ServerResponse): boolean {
+  const expected = getAdminPin()
+  if (!expected) return true
+  const provided = ((req.headers['x-admin-pin'] as string) ?? '').trim()
+  if (provided === expected) return true
+  res.writeHead(401, { 'Content-Type': 'application/json' })
+  res.end('{"error":"admin pin required"}')
+  return false
+}
+
 // ── Settings plugin ───────────────────────────────────────────────────────────
 
 const SETTINGS_FILE = path.resolve('data/settings.json')
@@ -83,6 +106,17 @@ function settingsPlugin(): Plugin {
       return
     }
 
+    // /api/admin/verify — returns 200 if the admin PIN (if any) is satisfied,
+    // 401 otherwise. Used by the client to gate the settings modal.
+    // Response body includes whether a PIN is configured so the client can
+    // distinguish "no PIN set" from "PIN accepted".
+    if (req.url === '/api/admin/verify' && req.method === 'GET') {
+      if (!checkPin(req, res)) return
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ ok: true, pinConfigured: getAdminPin() !== '' }))
+      return
+    }
+
     if (!req.url?.startsWith('/api/settings')) { next(); return }
 
     if (req.method === 'GET') {
@@ -98,6 +132,7 @@ function settingsPlugin(): Plugin {
     }
 
     if (req.method === 'POST') {
+      if (!checkPin(req, res)) return
       const senderTabId = (req.headers['x-tab-id'] as string) ?? ''
       let body = ''
       req.on('data', (chunk: Buffer) => { body += chunk.toString() })
@@ -172,6 +207,7 @@ function todosPlugin(): Plugin {
 
 const UPLOADS_DIR = path.resolve('public/uploads')
 const IMAGE_RE = /\.(jpe?g|png|gif|webp|avif)$/i
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024 // 25 MB — caps per-file upload to prevent disk-fill DoS
 
 function photosPlugin(): Plugin {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true })
@@ -185,25 +221,68 @@ function photosPlugin(): Plugin {
   }
 
   const uploadHandler: http.RequestListener = (req, res) => {
+    if (!checkPin(req, res)) return
     const qs = new URL(req.url ?? '/', 'http://x').searchParams
     const raw = qs.get('name') ?? `photo-${Date.now()}.jpg`
     const safe = path.basename(raw).replace(/[^a-zA-Z0-9._-]/g, '_')
+
+    // Reject non-image extensions. Uploads are served as static files under /uploads/,
+    // so allowing .html/.svg/etc would be a same-origin stored-XSS vector.
+    if (!IMAGE_RE.test(safe)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' })
+      res.end('{"error":"unsupported file type"}')
+      return
+    }
+
+    // Fast-fail if the client advertises an oversized body
+    const advertised = Number(req.headers['content-length'] ?? 0)
+    if (advertised > MAX_UPLOAD_BYTES) {
+      res.writeHead(413, { 'Content-Type': 'application/json' })
+      res.end('{"error":"file too large"}')
+      return
+    }
+
     const ext = path.extname(safe)
     const base = path.basename(safe, ext)
     let final = safe
     let n = 1
     while (fs.existsSync(path.join(UPLOADS_DIR, final))) final = `${base}-${n++}${ext}`
 
-    const dest = fs.createWriteStream(path.join(UPLOADS_DIR, final))
+    const finalPath = path.join(UPLOADS_DIR, final)
+    const dest = fs.createWriteStream(finalPath)
+
+    let received = 0
+    let rejected = false
+
+    // Attach the size watchdog BEFORE pipe so the first chunk is counted
+    req.on('data', (chunk: Buffer) => {
+      received += chunk.length
+      if (received > MAX_UPLOAD_BYTES && !rejected) {
+        rejected = true
+        req.unpipe(dest)
+        dest.destroy()
+        fs.unlink(finalPath, () => { /* ignore */ })
+        req.destroy()
+        res.writeHead(413, { 'Content-Type': 'application/json' })
+        res.end('{"error":"file too large"}')
+      }
+    })
+
     req.pipe(dest)
+
     dest.on('finish', () => {
+      if (rejected) return
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ name: final, url: `/uploads/${encodeURIComponent(final)}` }))
     })
-    dest.on('error', () => { res.writeHead(500); res.end('Write failed') })
+    dest.on('error', () => {
+      if (rejected) return
+      res.writeHead(500); res.end('Write failed')
+    })
   }
 
   const deleteHandler: http.RequestListener = (req, res) => {
+    if (!checkPin(req, res)) return
     const qs = new URL(req.url ?? '/', 'http://x').searchParams
     const name = qs.get('name')
     if (!name) { res.writeHead(400); res.end('Missing name'); return }
@@ -316,6 +395,7 @@ function oauthPlugin(): Plugin {
   const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 
   const tokenHandler: http.RequestListener = async (req, res) => {
+    if (!checkPin(req, res)) return
     const clientId = process.env.VITE_GOOGLE_CLIENT_ID
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET
     if (!clientId || !clientSecret) {
@@ -356,6 +436,7 @@ function oauthPlugin(): Plugin {
   }
 
   const refreshHandler: http.RequestListener = async (req, res) => {
+    if (!checkPin(req, res)) return
     const clientId = process.env.VITE_GOOGLE_CLIENT_ID
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET
     if (!clientId || !clientSecret) {

@@ -79,6 +79,14 @@ cat > "$AUTOSTART_FILE" << EOF
 # Prevent display from blanking or sleeping
 systemd-inhibit --what=idle:sleep:handle-lid-switch --who=kiosk --why="Kiosk mode" sleep infinity &
 
+# Wait for the fam-bam-dash server before launching Chromium (up to 90s).
+# The systemd service starts in parallel with the Wayland session so it may
+# not be ready by the time this autostart runs.
+_w=0
+until curl -sf http://localhost:12000 >/dev/null 2>&1; do
+    sleep 2; _w=\$((_w + 2)); [ \$_w -ge 90 ] && break
+done
+
 $CHROMIUM_BIN \\
   --noerrdialogs \\
   --disable-infobars \\

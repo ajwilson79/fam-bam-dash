@@ -1,3 +1,5 @@
+import { adminHeaders } from './admin'
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export type GoogleAccount = {
@@ -112,7 +114,7 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
 
   const res = await fetch('/api/auth/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...adminHeaders() },
     body: JSON.stringify({ code, codeVerifier, redirectUri: window.location.origin }),
   })
   if (!res.ok) throw new Error(`Token exchange failed: ${await res.text()}`)
@@ -125,7 +127,7 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
 export async function refreshAccessToken(account: GoogleAccount): Promise<GoogleAccount> {
   const res = await fetch('/api/auth/refresh', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...adminHeaders() },
     body: JSON.stringify({ refreshToken: account.refreshToken }),
   })
   if (!res.ok) throw new Error(`Token refresh failed: ${await res.text()}`)

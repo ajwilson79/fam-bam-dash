@@ -56,9 +56,13 @@ fam-bam-dash/
 │   ├── vite.config.ts            # Vite + server-side plugins (settings, todos, photos, iCal, gcal proxy, OAuth)
 │   ├── tsconfig.app.json
 │   └── tsconfig.node.json        # includes "types": ["node"] for vite plugins
+├── assets/
+│   ├── splash-boot.png           # Pre-rotated image for Plymouth boot splash (shown before OS rotation)
+│   └── splash.png                # Normal-orientation image for wbg Wayland wallpaper
 ├── scripts/
 │   ├── motion_sensor.py          # Optional PIR sensor script (reads settings, controls screen + app mode)
-│   └── motion-sensor-setup.sh   # Installs motion sensor as a systemd service
+│   ├── motion-sensor-setup.sh   # Installs motion sensor as a systemd service
+│   └── splash-setup.sh          # Installs Plymouth boot splash + wbg session wallpaper
 ├── kiosk-setup.sh
 └── README.md
 ```

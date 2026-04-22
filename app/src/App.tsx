@@ -3,6 +3,7 @@ import Calendar from './widgets/Calendar'
 import Weather, { WeatherFull } from './widgets/Weather'
 import PhotoSlideshow from './widgets/PhotoSlideshow'
 import SettingsPanel from './widgets/SettingsPanel'
+import AdminPinPrompt from './widgets/AdminPinPrompt'
 import Clock from './widgets/Clock'
 import TodoPanel from './widgets/TodoPanel'
 import { useEffect, useRef, useState } from 'react'
@@ -10,12 +11,21 @@ import { getTabId, loadSettings, setSettings, subscribeSettings, syncSettingsFro
 import { handleOAuthCallback } from './lib/oauth'
 import { syncCalendars } from './lib/gapi'
 import { syncFromServer } from './lib/todo'
+import { verifyAdminAccess } from './lib/admin'
 
 function App() {
   const [openSettings, setOpenSettings] = useState(false)
+  const [pinPromptOpen, setPinPromptOpen] = useState(false)
   const [theme, setTheme] = useState(() => loadSettings().theme)
   const [isIdle, setIsIdle] = useState(false)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Checks the server's admin-PIN gate, then either opens Settings or prompts for a PIN.
+  async function requestOpenSettings() {
+    const result = await verifyAdminAccess()
+    if (result.ok) setOpenSettings(true)
+    else setPinPromptOpen(true)
+  }
 
   useEffect(() => {
     const unsub = subscribeSettings(() => setTheme(loadSettings().theme))
@@ -78,17 +88,17 @@ function App() {
 
     if (error) {
       console.warn('Google OAuth error:', error)
-      setOpenSettings(true)
+      requestOpenSettings()
       return
     }
 
     if (code && state) {
       handleOAuthCallback(code, state)
         .then(account => syncCalendars(account.email))
-        .then(() => setOpenSettings(true))
+        .then(() => requestOpenSettings())
         .catch(err => {
           console.error('OAuth callback failed:', err)
-          setOpenSettings(true)
+          requestOpenSettings()
         })
     }
   }, [])
@@ -136,13 +146,20 @@ function App() {
             {theme === 'dark' ? '☀' : '☾'}
           </button>
           <button
-            onClick={() => setOpenSettings(true)}
+            onClick={requestOpenSettings}
             className="settings-fab"
             aria-label="Open settings"
           >
             ⚙
           </button>
         </div>
+      )}
+
+      {pinPromptOpen && (
+        <AdminPinPrompt
+          onSuccess={() => { setPinPromptOpen(false); setOpenSettings(true) }}
+          onCancel={() => setPinPromptOpen(false)}
+        />
       )}
 
       {/* Idle screensaver — fullscreen photo frame, dismissed by any interaction */}
