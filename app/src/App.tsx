@@ -19,6 +19,7 @@ function App() {
   const [theme, setTheme] = useState(() => loadSettings().theme)
   const [isIdle, setIsIdle] = useState(false)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const resetIdleTimerRef = useRef<(() => void) | null>(null)
 
   // Checks the server's admin-PIN gate, then either opens Settings or prompts for a PIN.
   async function requestOpenSettings() {
@@ -42,6 +43,7 @@ function App() {
         idleTimer.current = setTimeout(() => setIsIdle(true), s.idle.timeoutMinutes * 60_000)
       }
     }
+    resetIdleTimerRef.current = resetTimer
     const events = ['mousemove', 'mousedown', 'touchstart', 'keydown'] as const
     events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
     resetTimer()
@@ -66,7 +68,7 @@ function App() {
         const senderTabId = e.data.slice(7)
         if (senderTabId !== getTabId()) window.location.reload()
       } else if (e.data === 'display-mode:dashboard') {
-        setIsIdle(false)
+        resetIdleTimerRef.current?.()
       } else if (e.data === 'display-mode:screensaver') {
         setIsIdle(true)
       }

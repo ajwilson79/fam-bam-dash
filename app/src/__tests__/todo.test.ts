@@ -14,11 +14,10 @@ import {
 } from '../lib/todo'
 
 describe('defaultState', () => {
-  it('creates two lists', () => {
+  it('creates one list', () => {
     const s = defaultState()
-    expect(s.lists).toHaveLength(2)
+    expect(s.lists).toHaveLength(1)
     expect(s.lists[0].name).toBe('Family')
-    expect(s.lists[1].name).toBe('Groceries')
   })
 
   it('sets first list as active', () => {
@@ -30,9 +29,9 @@ describe('defaultState', () => {
 describe('addList', () => {
   it('appends a new list and makes it active', () => {
     const s = addList(defaultState(), 'Shopping')
-    expect(s.lists).toHaveLength(3)
-    expect(s.lists[2].name).toBe('Shopping')
-    expect(s.activeListId).toBe(s.lists[2].id)
+    expect(s.lists).toHaveLength(2)
+    expect(s.lists[1].name).toBe('Shopping')
+    expect(s.activeListId).toBe(s.lists[1].id)
   })
 })
 
@@ -44,7 +43,7 @@ describe('renameList', () => {
   })
 
   it('does not affect other lists', () => {
-    const s = defaultState()
+    const s = addList(defaultState(), 'Groceries')
     const renamed = renameList(s, s.lists[0].id, 'X')
     expect(renamed.lists[1].name).toBe('Groceries')
   })
@@ -52,7 +51,7 @@ describe('renameList', () => {
 
 describe('removeList', () => {
   it('removes the specified list', () => {
-    const s = defaultState()
+    const s = addList(defaultState(), 'Groceries')
     const updated = removeList(s, s.lists[1].id)
     expect(updated.lists).toHaveLength(1)
     expect(updated.lists[0].name).toBe('Family')
@@ -60,8 +59,7 @@ describe('removeList', () => {
 
   it('does not remove the last list', () => {
     const s = defaultState()
-    const one = removeList(s, s.lists[1].id)
-    const still = removeList(one, one.lists[0].id)
+    const still = removeList(s, s.lists[0].id)
     expect(still.lists).toHaveLength(1)
   })
 
@@ -74,7 +72,7 @@ describe('removeList', () => {
 
 describe('setActive', () => {
   it('changes activeListId', () => {
-    const s = defaultState()
+    const s = addList(defaultState(), 'Groceries')
     const updated = setActive(s, s.lists[1].id)
     expect(updated.activeListId).toBe(s.lists[1].id)
   })
@@ -111,7 +109,8 @@ describe('addItem', () => {
 
 describe('toggleItem', () => {
   it('toggles done state', () => {
-    const s = addItem(defaultState(), defaultState().lists[0].id, 'task')
+    const state = defaultState()
+    const s = addItem(state, state.lists[0].id, 'task')
     const listId = s.lists[0].id
     const itemId = s.lists[0].items[0].id
     const toggled = toggleItem(s, listId, itemId)
@@ -147,7 +146,8 @@ describe('clearCompleted', () => {
 
 describe('saveState / loadState', () => {
   it('round-trips state', () => {
-    const s = addItem(defaultState(), defaultState().lists[0].id, 'remembered')
+    const state = defaultState()
+    const s = addItem(state, state.lists[0].id, 'remembered')
     saveState(s)
     const loaded = loadState()
     expect(loaded.lists[0].items[0].text).toBe('remembered')
