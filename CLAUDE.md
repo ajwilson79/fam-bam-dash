@@ -97,6 +97,7 @@ app/src/
 - **Theming** — Pure CSS custom properties toggled on `<html>`. No component re-renders.
 - **Photo sources** — `import.meta.glob` for bundled assets + runtime `/api/photos/list` + optional Google Photos album.
 - **Photo thumbnails** — The admin panel (`PhotoUpload.tsx`) fetches `/api/photos/thumb?name=<file>` instead of full-size URLs. The server generates a 400×300 JPEG on first request using `sharp` and caches it in `public/uploads/.thumbs/`. The slideshow always uses full-size originals. Thumbnails are deleted alongside their originals.
+- **HEIC upload conversion** — HEIC/HEIF files (iPhone default format) are accepted on upload and converted to JPEG server-side by `heif-convert` (from `libheif-examples`). `sharp`'s bundled libvips on ARM is compiled with AV1/AVIF support only — it cannot decode HEVC-encoded HEIC. `heif-convert` handles HEVC decoding, ICC color profiles, and HEIF rotation metadata correctly. `pi-setup.sh` installs the package automatically.
 - **Preview mode static files** — `vite preview` only serves `dist/` (a build snapshot), so the `photosPlugin` registers a middleware in `configurePreviewServer` that serves newly uploaded files from `public/uploads/` directly at `/uploads/*`. Dev mode is unaffected (Vite serves `public/` natively).
 
 ## Environment Variables
@@ -141,7 +142,7 @@ ssh fam-bam-pi "cd ~/fam-bam-dash && git pull && cd app && npm install && npm ru
 
 Persistent data lives in `app/data/` (settings + todos), `app/public/uploads/` (photos), and `app/public/uploads/.thumbs/` (auto-generated thumbnails) — back up `data/` and `uploads/` (`.thumbs/` is regenerated automatically).
 
-`pi-setup.sh` is the single entry point for a full Pi install — Node.js, build, app service, kiosk mode, boot splash, session wallpaper, display rotation, and optional motion sensor, all in one script.
+`pi-setup.sh` is the single entry point for a full Pi install — Node.js, `libheif-examples` (HEIC photo support), build, app service, kiosk mode, boot splash, session wallpaper, display rotation, and optional motion sensor, all in one script.
 
 `kiosk-setup.sh` configures Chromium kiosk mode (called by `pi-setup.sh`, can also be run standalone).
 

@@ -91,6 +91,18 @@ step "Installing Node.js 20 via NodeSource..."
     ok "Node.js $(node --version) installed."
 fi
 
+# ── heif-convert (HEIC photo support) ────────────────────────────────────────
+# Required for server-side HEIC→JPEG conversion on upload.
+# sharp's bundled libvips on ARM only supports AV1/AVIF, not HEVC-encoded HEIC.
+
+if ! command -v heif-convert &>/dev/null; then
+    step "Installing libheif-examples (HEIC/HEIF photo support)..."
+    sudo apt-get install -y libheif-examples >/dev/null
+    ok "heif-convert installed."
+else
+    ok "heif-convert already installed."
+fi
+
 # ── Step 2: Configure .env.local ─────────────────────────────────────────────
 
 header "Step 2 of 9: Environment Variables"
