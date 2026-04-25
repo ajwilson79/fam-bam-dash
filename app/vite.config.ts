@@ -328,8 +328,10 @@ function photosPlugin(): Plugin {
       if (rejected) return
       if (isHeic) {
         const finalPath = path.join(UPLOADS_DIR, final)
-        // sharp on this Pi only handles AVIF, not HEVC-encoded HEIC — use ffmpeg instead
-        execFile('ffmpeg', ['-i', tmpPath, '-q:v', '2', '-y', '-loglevel', 'error', finalPath],
+        // sharp only handles AVIF on this Pi (no HEVC codec).
+        // heif-convert (libheif-examples) correctly decodes HEVC-encoded HEIC
+        // and honours HEIF rotation metadata (irot box) that ffmpeg may ignore.
+        execFile('heif-convert', ['-q', '90', tmpPath, finalPath],
           (err) => {
             fs.unlink(tmpPath, () => {})
             if (err) {
