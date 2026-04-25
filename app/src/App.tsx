@@ -4,6 +4,7 @@ import Weather, { WeatherFull } from './widgets/Weather'
 import PhotoSlideshow from './widgets/PhotoSlideshow'
 import SettingsPanel from './widgets/SettingsPanel'
 import AdminPinPrompt from './widgets/AdminPinPrompt'
+import VirtualKeyboard from './widgets/VirtualKeyboard'
 import Clock from './widgets/Clock'
 import TodoPanel from './widgets/TodoPanel'
 import { useEffect, useRef, useState } from 'react'
@@ -178,6 +179,7 @@ function App() {
       )}
 
       <SettingsPanel open={openSettings} onClose={() => setOpenSettings(false)} />
+      <VirtualKeyboard />
     </div>
   )
 }
