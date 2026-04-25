@@ -4,6 +4,8 @@ import { zipToLatLon } from '../lib/weather'
 import CalendarAdmin from './CalendarAdmin'
 import PhotoUpload from './PhotoUpload'
 import TodoAdmin from './TodoAdmin'
+import AdminPinPrompt from './AdminPinPrompt'
+import { adminHeaders } from '../lib/admin'
 
 type Tab = 'settings' | 'calendars' | 'photos' | 'todos'
 
@@ -13,6 +15,7 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
   const [zipInput, setZipInput] = useState(() => loadSettings().weather.zip)
   const [zipStatus, setZipStatus] = useState<{ ok: boolean; msg: string } | null>(null)
   const [zipBusy, setZipBusy] = useState(false)
+  const [quitPromptOpen, setQuitPromptOpen] = useState(false)
 
   function update(next: Settings) {
     setS(next)
@@ -261,7 +264,7 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
               </section>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-2 flex-wrap">
                 <button onClick={() => update(defaultSettings())}
                   className="px-4 py-2 rounded-lg bg-theme-elevated hover:opacity-80 transition-opacity touch-manipulation">
                   Reset to Defaults
@@ -274,6 +277,12 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
                 }} className="px-4 py-2 rounded-lg bg-theme-elevated hover:opacity-80 transition-opacity touch-manipulation">
                   Export JSON
                 </button>
+                <button
+                  onClick={() => setQuitPromptOpen(true)}
+                  className="px-4 py-2 rounded-lg bg-red-900/60 hover:bg-red-800/80 text-red-200 transition-colors touch-manipulation ml-auto"
+                >
+                  Exit Kiosk
+                </button>
               </div>
             </div>
           )}
@@ -283,6 +292,17 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
           {tab === 'todos' && <TodoAdmin />}
         </div>
       </div>
+
+      {quitPromptOpen && (
+        <AdminPinPrompt
+          message="Enter the PIN to exit kiosk mode and return to the desktop."
+          onSuccess={() => {
+            setQuitPromptOpen(false)
+            fetch('/api/quit-kiosk', { method: 'POST', headers: adminHeaders() })
+          }}
+          onCancel={() => setQuitPromptOpen(false)}
+        />
+      )}
     </div>
   )
 }
