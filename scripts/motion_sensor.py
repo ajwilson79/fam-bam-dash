@@ -139,6 +139,7 @@ def main():
     screen_state = "unknown"   # "on" | "off" | "unknown"
     last_mode_sent = ""        # last display-mode value sent to the app
     last_motion_time = time.time()  # initialise so screen doesn't shut off instantly
+    motion_active = False      # tracks edges so we only log on transitions
 
     print("Motion sensor loop started")
 
@@ -150,21 +151,34 @@ def main():
             fetched = fetch_settings()
             if fetched:
                 settings = fetched
+                ms = settings.get("motionSensor", {})
+                print(
+                    f"Settings: day_off={ms.get('dayScreenOffMinutes')}min "
+                    f"night_off={ms.get('nightScreenOffMinutes')}min "
+                    f"night={ms.get('nightStartHour')}-{ms.get('nightEndHour')}"
+                )
             last_settings_fetch = now
 
         night = is_night(settings)
+        detected = pir.motion_detected
 
-        if pir.motion_detected:
+        if detected != motion_active:
+            print(f"Motion {'detected' if detected else 'cleared'}")
+            motion_active = detected
+
+        if detected:
             last_motion_time = now
 
             # Wake screen if it was off
             if screen_state != "on":
+                print("Screen → on")
                 screen_on()
                 screen_state = "on"
 
             # Tell the app which mode to show
             target_mode = "screensaver" if night else "dashboard"
             if last_mode_sent != target_mode:
+                print(f"Display mode → {target_mode}")
                 set_display_mode(target_mode)
                 last_mode_sent = target_mode
 
@@ -172,6 +186,7 @@ def main():
             # No motion — shut screen off after timeout
             timeout = screen_off_seconds(settings, night)
             if screen_state == "on" and now - last_motion_time > timeout:
+                print(f"Screen → off (no motion for {timeout:.0f}s, night={night})")
                 screen_off()
                 screen_state = "off"
 

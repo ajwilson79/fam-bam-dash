@@ -47,13 +47,14 @@ After=fam-bam-dash.service
 Wants=fam-bam-dash.service
 
 [Service]
-ExecStart=/usr/bin/python3 $SCRIPT_PATH
+ExecStart=/usr/bin/python3 -u $SCRIPT_PATH
 Restart=on-failure
 RestartSec=10
 User=$RUN_USER
 WorkingDirectory=$RUN_USER_HOME
 Environment=HOME=$RUN_USER_HOME
 Environment=XDG_RUNTIME_DIR=/run/user/$USER_UID
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
