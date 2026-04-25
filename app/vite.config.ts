@@ -332,11 +332,13 @@ function photosPlugin(): Plugin {
         // heif-convert (libheif-examples) correctly decodes HEVC-encoded HEIC
         // and honours HEIF rotation metadata (irot box) that ffmpeg may ignore.
         execFile('heif-convert', ['-q', '90', tmpPath, finalPath],
-          (err) => {
+          (err, _stdout, stderr) => {
             fs.unlink(tmpPath, () => {})
             if (err) {
+              const detail = (stderr || err.message || '').trim()
+              process.stderr.write(`[heif-convert] ${detail}\n`)
               res.writeHead(500, { 'Content-Type': 'application/json' })
-              res.end('{"error":"HEIC conversion failed"}')
+              res.end(JSON.stringify({ error: `HEIC conversion failed: ${detail}` }))
               return
             }
             broadcast('photos-changed')
