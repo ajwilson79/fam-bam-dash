@@ -97,12 +97,19 @@ export default function Calendar() {
     }
   }, [])
 
-  if (error) return (
-    <div className="agenda-wrap">
-      <div className="widget-label">Schedule</div>
-      <div style={{ color: '#f87171', fontSize: '0.8rem' }}>{error}</div>
-    </div>
-  )
+  if (error) {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    const msg = (!isLocal && error.includes('No calendar source configured'))
+      ? 'Calendar is only available on the Fam Bam Dash device.'
+      : error
+    const color = msg === error ? '#f87171' : 'var(--color-text-muted)'
+    return (
+      <div className="agenda-wrap">
+        <div className="widget-label">Schedule</div>
+        <div style={{ color, fontSize: '0.8rem' }}>{msg}</div>
+      </div>
+    )
+  }
 
   if (!events) return <CalendarSkeleton />
 
