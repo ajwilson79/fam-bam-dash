@@ -86,6 +86,7 @@ function checkPin(req: http.IncomingMessage, res: http.ServerResponse): boolean 
 // ── Settings plugin ───────────────────────────────────────────────────────────
 
 const SETTINGS_FILE = path.resolve('data/settings.json')
+const CALENDAR_CACHE_FILE = path.resolve('data/calendar-cache.json')
 
 function settingsPlugin(): Plugin {
   fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true })
@@ -126,6 +127,38 @@ function settingsPlugin(): Plugin {
         res.end('{"ok":true}')
       })
       return
+    }
+
+    // /api/calendar-cache — read/write the server-side event cache
+    if (req.url === '/api/calendar-cache') {
+      if (req.method === 'GET') {
+        try {
+          const data = fs.existsSync(CALENDAR_CACHE_FILE) ? fs.readFileSync(CALENDAR_CACHE_FILE, 'utf-8') : '[]'
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(data)
+        } catch {
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end('[]')
+        }
+        return
+      }
+      if (req.method === 'POST') {
+        let body = ''
+        req.on('data', (chunk: Buffer) => { body += chunk.toString() })
+        req.on('end', () => {
+          try {
+            const parsed = JSON.parse(body)
+            if (!Array.isArray(parsed)) throw new Error('expected array')
+            fs.writeFileSync(CALENDAR_CACHE_FILE, body, 'utf-8')
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end('{"ok":true}')
+          } catch {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            res.end('{"error":"invalid json"}')
+          }
+        })
+        return
+      }
     }
 
     if (!req.url?.startsWith('/api/settings')) { next(); return }
