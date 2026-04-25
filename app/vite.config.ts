@@ -328,9 +328,36 @@ function photosPlugin(): Plugin {
       if (rejected) return
       if (isHeic) {
         const finalPath = path.join(UPLOADS_DIR, final)
-        // sharp only handles AVIF on this Pi (no HEVC codec).
-        // heif-convert (libheif-examples) correctly decodes HEVC-encoded HEIC
-        // and honours HEIF rotation metadata (irot box) that ffmpeg may ignore.
+
+        // iOS Safari converts HEIC to JPEG before upload but keeps the .HEIC
+        // filename. Detect this by checking magic bytes so we don't feed a JPEG
+        // to heif-convert (which only accepts real HEIC/HEIF containers).
+        let alreadyJpeg = false
+        try {
+          const buf = Buffer.alloc(3)
+          const fd = fs.openSync(tmpPath, 'r')
+          fs.readSync(fd, buf, 0, 3, 0)
+          fs.closeSync(fd)
+          alreadyJpeg = buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF
+        } catch { /* if we can't read, let heif-convert try and fail naturally */ }
+
+        if (alreadyJpeg) {
+          // Already JPEG — just move it into place
+          fs.rename(tmpPath, finalPath, (renameErr) => {
+            if (renameErr) {
+              fs.unlink(tmpPath, () => {})
+              res.writeHead(500, { 'Content-Type': 'application/json' })
+              res.end('{"error":"failed to save file"}')
+              return
+            }
+            broadcast('photos-changed')
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ name: final, url: `/uploads/${encodeURIComponent(final)}` }))
+          })
+          return
+        }
+
+        // Real HEIC — convert with heif-convert (handles HEVC + rotation metadata)
         execFile('heif-convert', ['-q', '90', tmpPath, finalPath],
           (err, _stdout, stderr) => {
             fs.unlink(tmpPath, () => {})
