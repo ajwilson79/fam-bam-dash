@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { setStoredAdminPin, verifyAdminAccess } from '../lib/admin'
 
-export default function AdminPinPrompt({ onSuccess, onCancel }: {
+export default function AdminPinPrompt({ onSuccess, onCancel, message }: {
   onSuccess: () => void
   onCancel: () => void
+  message?: string
 }) {
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -38,7 +39,7 @@ export default function AdminPinPrompt({ onSuccess, onCancel }: {
       >
         <div>
           <h2 className="text-theme-text text-lg font-semibold">Admin PIN</h2>
-          <p className="text-theme-muted text-sm mt-1">Enter the PIN to open Settings on this device.</p>
+          <p className="text-theme-muted text-sm mt-1">{message ?? 'Enter the PIN to open Settings on this device.'}</p>
         </div>
 
         <input

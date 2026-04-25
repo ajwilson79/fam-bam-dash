@@ -5,6 +5,7 @@ import * as https from 'node:https'
 import * as http from 'node:http'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { exec } from 'node:child_process'
 import type { Plugin } from 'vite'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -114,6 +115,16 @@ function settingsPlugin(): Plugin {
       if (!checkPin(req, res)) return
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ ok: true, pinConfigured: getAdminPin() !== '' }))
+      return
+    }
+
+    // /api/quit-kiosk — kills the Chromium kiosk process (PIN gated)
+    if (req.url === '/api/quit-kiosk' && req.method === 'POST') {
+      if (!checkPin(req, res)) return
+      exec('pkill -f chromium', () => {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end('{"ok":true}')
+      })
       return
     }
 

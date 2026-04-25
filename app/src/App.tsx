@@ -12,12 +12,13 @@ import { getTabId, loadSettings, setSettings, subscribeSettings, syncSettingsFro
 import { handleOAuthCallback } from './lib/oauth'
 import { syncCalendars } from './lib/gapi'
 import { syncFromServer } from './lib/todo'
-import { verifyAdminAccess } from './lib/admin'
+import { adminHeaders, verifyAdminAccess } from './lib/admin'
 import { notifyPhotosChanged } from './lib/photos'
 
 function App() {
   const [openSettings, setOpenSettings] = useState(false)
   const [pinPromptOpen, setPinPromptOpen] = useState(false)
+  const [quitKioskOpen, setQuitKioskOpen] = useState(false)
   const [theme, setTheme] = useState(() => loadSettings().theme)
   const [isIdle, setIsIdle] = useState(false)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -167,6 +168,24 @@ function App() {
           onCancel={() => setPinPromptOpen(false)}
         />
       )}
+
+      {quitKioskOpen && (
+        <AdminPinPrompt
+          message="Enter the PIN to exit kiosk mode and return to the desktop."
+          onSuccess={() => {
+            setQuitKioskOpen(false)
+            fetch('/api/quit-kiosk', { method: 'POST', headers: adminHeaders() })
+          }}
+          onCancel={() => setQuitKioskOpen(false)}
+        />
+      )}
+
+      {/* Hidden tap zone — bottom-left corner; tap to exit kiosk (PIN required) */}
+      <div
+        className="fixed bottom-0 left-0 w-14 h-14 z-50"
+        style={{ WebkitTapHighlightColor: 'transparent' }}
+        onClick={() => setQuitKioskOpen(true)}
+      />
 
       {/* Idle screensaver — fullscreen photo frame, dismissed by any interaction */}
       {isIdle && (
