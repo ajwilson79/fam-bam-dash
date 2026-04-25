@@ -20,7 +20,15 @@ if ! python3 -c "import gpiozero" 2>/dev/null; then
     sudo apt-get install -y python3-gpiozero
 fi
 
+# wlopm drives screen power on Wayland (labwc). Without it the script can't
+# turn the display off — xset dpms only works on X11.
+if ! command -v wlopm &>/dev/null; then
+    echo "Installing wlopm..."
+    sudo apt-get install -y wlopm
+fi
+
 USER=${SUDO_USER:-pi}
+USER_UID=$(id -u "$USER")
 
 echo "Creating systemd service at $SERVICE_FILE..."
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF
@@ -34,7 +42,7 @@ ExecStart=/usr/bin/python3 $SCRIPT_PATH
 Restart=on-failure
 RestartSec=10
 User=$USER
-Environment=DISPLAY=:0
+Environment=XDG_RUNTIME_DIR=/run/user/$USER_UID
 
 [Install]
 WantedBy=multi-user.target

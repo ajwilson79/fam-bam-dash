@@ -9,14 +9,17 @@ exits cleanly so the systemd service does not spam restart loops.
 Behaviour:
   Day hours  + motion  → wake screen, tell app to show dashboard
   Night hours + motion → wake screen, tell app to show screensaver (picture frame)
-  No motion for configured timeout → screen off (handled here via xset, not the app)
+  No motion for configured timeout → screen off (handled here via wlopm, not the app)
 
 All timeouts and night-hour boundaries are read from the app's /api/settings
 endpoint so they can be adjusted from the browser without SSH.
 """
 
+import glob
 import json
 import os
+import shutil
+import subprocess
 import sys
 import time
 import urllib.error
@@ -41,11 +44,51 @@ except Exception as e:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+_warned_no_tool = False
+
+def _wayland_env() -> dict:
+    """Build env for talking to the labwc compositor.
+
+    The systemd service runs outside the Wayland session, so XDG_RUNTIME_DIR /
+    WAYLAND_DISPLAY may be missing. Resolve them on every call so a compositor
+    that comes up after this script does is picked up automatically.
+    """
+    env = os.environ.copy()
+    runtime_dir = env.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+    env["XDG_RUNTIME_DIR"] = runtime_dir
+    if not env.get("WAYLAND_DISPLAY"):
+        sockets = sorted(
+            s for s in glob.glob(f"{runtime_dir}/wayland-*")
+            if not s.endswith(".lock")
+        )
+        if sockets:
+            env["WAYLAND_DISPLAY"] = os.path.basename(sockets[0])
+    return env
+
+def _set_screen_power(on: bool):
+    global _warned_no_tool
+    if not shutil.which("wlopm"):
+        if not _warned_no_tool:
+            print("wlopm not found — install with: sudo apt install wlopm")
+            _warned_no_tool = True
+        return
+    cmd = ["wlopm", "--on" if on else "--off", "*"]
+    try:
+        result = subprocess.run(
+            cmd, env=_wayland_env(), check=False, timeout=5,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        if result.returncode != 0:
+            err = result.stderr.decode(errors="replace").strip()
+            print(f"wlopm failed (rc={result.returncode}): {err}")
+    except Exception as e:
+        print(f"Failed to run wlopm: {e}")
+
 def screen_on():
-    os.system("xset dpms force on")
+    _set_screen_power(True)
 
 def screen_off():
-    os.system("xset dpms force standby")
+    _set_screen_power(False)
 
 def fetch_settings() -> dict:
     try:
