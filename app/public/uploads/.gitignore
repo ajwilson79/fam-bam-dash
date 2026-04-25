@@ -1,0 +1,4 @@
+# Ignore all uploaded files — only keep the placeholder
+*
+!.gitkeep
+!.gitignore
