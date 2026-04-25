@@ -34,14 +34,18 @@ npm run test -- src/__tests__/gcal.test.ts
 Browser (React SPA)
     ↓ REST + SSE
 Vite Node.js process
-    ├── /api/settings      → reads/writes data/settings.json
-    ├── /api/todos         → reads/writes data/todos.json
-    ├── /api/photos/*      → upload/list/delete from public/uploads/
-    ├── /api/sse           → Server-Sent Events (multi-tab sync + display mode)
-    ├── /api/display-mode  → accepts POST from motion sensor; broadcasts via SSE
-    ├── /api/ical          → server-side proxy for iCal feed (bypasses CORS)
-    ├── /api/gcal/*        → server-side proxy for Google Calendar API
-    └── /api/auth/*        → OAuth PKCE token exchange & refresh
+    ├── /api/settings        → reads/writes data/settings.json
+    ├── /api/todos           → reads/writes data/todos.json
+    ├── /api/photos/list     → list uploaded photos from public/uploads/
+    ├── /api/photos/upload   → write file to public/uploads/ (PIN gated)
+    ├── /api/photos/delete   → delete file from public/uploads/ (PIN gated)
+    ├── /api/photos/thumb    → generate/serve 400×300 JPEG thumbnail (cached in public/uploads/.thumbs/)
+    ├── /uploads/*           → serve public/uploads/ directly (preview mode only; dev serves it natively)
+    ├── /api/sse             → Server-Sent Events (multi-tab sync + display mode + photo changes)
+    ├── /api/display-mode    → accepts POST from motion sensor; broadcasts via SSE
+    ├── /api/ical            → server-side proxy for iCal feed (bypasses CORS)
+    ├── /api/gcal/*          → server-side proxy for Google Calendar API
+    └── /api/auth/*          → OAuth PKCE token exchange & refresh
 
 scripts/motion_sensor.py (optional, Raspberry Pi only)
     → reads settings from /api/settings every 60s
@@ -56,9 +60,12 @@ No external state library. Two custom pub/sub modules handle all shared state:
 - **`lib/settings.ts`** — `Settings` type (weather, calendar, slideshow, todo, motionSensor, theme), `subscribeSettings()` / `setSettings()`. Persists to `localStorage` + `/api/settings` (server backup). Restored from server on startup via `syncSettingsFromServer()`.
 - **`lib/todo.ts`** — `TodoState` type, `subscribeTodo()` / `saveState()`. Same dual-persistence pattern. Checked items auto-remove after a configurable delay via `autoRemoveExpired()`.
 
-Multi-tab sync: All tabs connect to `/api/sse`. The SSE stream carries two event types:
+Multi-tab sync: All tabs connect to `/api/sse`. The SSE stream carries three event types:
 - `reload:<tabId>` — broadcast when settings/todos are saved; tabs with a different `tabId` reload
 - `display-mode:dashboard` / `display-mode:screensaver` — broadcast when the motion sensor script POSTs to `/api/display-mode`; all tabs switch mode immediately
+- `photos-changed` — broadcast when a photo is uploaded or deleted; all tabs reload the slideshow immediately
+
+Server sync on startup: both `syncFromServer()` (todos) and `syncSettingsFromServer()` always apply the server state over any cached localStorage — the server is the authoritative source. Local state is only kept if it is byte-for-byte identical to the server copy.
 
 ## Code Structure
 
@@ -87,6 +94,8 @@ app/src/
 - **External fetches** — All wrapped with `withRetry()` from `lib/retry.ts` for exponential backoff.
 - **Theming** — Pure CSS custom properties toggled on `<html>`. No component re-renders.
 - **Photo sources** — `import.meta.glob` for bundled assets + runtime `/api/photos/list` + optional Google Photos album.
+- **Photo thumbnails** — The admin panel (`PhotoUpload.tsx`) fetches `/api/photos/thumb?name=<file>` instead of full-size URLs. The server generates a 400×300 JPEG on first request using `sharp` and caches it in `public/uploads/.thumbs/`. The slideshow always uses full-size originals. Thumbnails are deleted alongside their originals.
+- **Preview mode static files** — `vite preview` only serves `dist/` (a build snapshot), so the `photosPlugin` registers a middleware in `configurePreviewServer` that serves newly uploaded files from `public/uploads/` directly at `/uploads/*`. Dev mode is unaffected (Vite serves `public/` natively).
 
 ## Environment Variables
 
@@ -119,7 +128,15 @@ Unit tests live in `app/src/__tests__/` covering `gcal`, `todo`, `settings`, `we
 
 Run `npm run build` then `npm run preview` — `vite preview` serves `dist/` and runs the `vite.config.ts` API plugins, so the full API surface is available without a separate server process.
 
-Manage with a systemd service (see conversation history for an example unit file). Persistent data lives in `app/data/` (settings + todos) and `app/public/uploads/` (photos) — back these up.
+The systemd service is named **`fam-bam-dash`**. Deploy command (pull → install → build → restart):
+
+```bash
+ssh fam-bam-pi "cd ~/fam-bam-dash && git pull && cd app && npm install && npm run build && sudo systemctl restart fam-bam-dash"
+```
+
+`npm install` is needed whenever `package.json` changes. Safe to include on every deploy.
+
+Persistent data lives in `app/data/` (settings + todos), `app/public/uploads/` (photos), and `app/public/uploads/.thumbs/` (auto-generated thumbnails) — back up `data/` and `uploads/` (`.thumbs/` is regenerated automatically).
 
 `pi-setup.sh` is the single entry point for a full Pi install — Node.js, build, app service, kiosk mode, boot splash, session wallpaper, display rotation, and optional motion sensor, all in one script.
 

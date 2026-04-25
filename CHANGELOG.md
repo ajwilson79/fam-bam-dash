@@ -7,17 +7,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Photo thumbnails in admin panel** – Settings → 🖼️ Photos now loads fast 400×300 JPEG previews (`/api/photos/thumb`) instead of full-resolution images. Thumbnails are generated on first request using `sharp` and cached in `public/uploads/.thumbs/`. Deleting a photo also removes its cached thumbnail.
 - **Idle screensaver / picture frame mode** – after a configurable timeout (default 5 min) with no user interaction, the display switches to a fullscreen photo slideshow with Ken Burns animation; any mouse move, click, touch, or keypress returns to the dashboard. Configured in Settings → ⚙️ Settings → 💤 Screensaver
 - **Ken Burns effect** – photos in the slideshow have a gentle zoom/pan animation with four alternating variants
 - **Live multi-screen sync** – Server-Sent Events (`/api/sse`) push a reload to all open browser tabs whenever settings or todos are saved; the tab that made the change is excluded so the editor is never disrupted
+- **Photo change sync via SSE** – uploading or deleting a photo broadcasts `photos-changed` over SSE so the slideshow on all connected tabs (including the Pi's display) refreshes immediately without a page reload
 - **Configurable todo auto-remove delay** – Settings → ⚙️ Settings → To-Do; default 10 minutes, range 1–1440
 - **Calendar color coding** – each event shows a colored dot matching its Google Calendar color
 - **Hourly weather forecast** – scrollable 24-hour strip above the 5-day forecast
-- **Server-persisted settings** – settings saved to `app/data/settings.json`; restored on startup if localStorage is empty
+- **Server-persisted settings** – settings saved to `app/data/settings.json`; always restored from server on startup (server is authoritative over localStorage)
 - **Calendar shows current day forward only** – past days filtered out; 30-day window
 - Weather units toggle (°F/mph ↔ °C/km/h) in Settings → ⚙️ Settings
 
 ### Fixed
+- **Remote browser todos/settings always in sync** – `syncFromServer()` and `syncSettingsFromServer()` now always apply the server state on startup instead of only when localStorage was empty. Fixes stale data on remote browsers (e.g. PC accessing the Pi dashboard) after items are added or removed on the Pi.
+- **Uploaded photos visible immediately in preview mode** – `vite preview` only serves `dist/` (a build snapshot), so new uploads were unreachable until a rebuild. A middleware now serves `public/uploads/` directly in preview mode.
 - Settings panel Close button is now clearly visible in dark mode (explicit text color + border)
 
 ## [1.1.0] - 2026-04-19
