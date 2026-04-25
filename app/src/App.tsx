@@ -12,6 +12,7 @@ import { handleOAuthCallback } from './lib/oauth'
 import { syncCalendars } from './lib/gapi'
 import { syncFromServer } from './lib/todo'
 import { verifyAdminAccess } from './lib/admin'
+import { notifyPhotosChanged } from './lib/photos'
 
 function App() {
   const [openSettings, setOpenSettings] = useState(false)
@@ -67,6 +68,8 @@ function App() {
       if (e.data.startsWith('reload:')) {
         const senderTabId = e.data.slice(7)
         if (senderTabId !== getTabId()) window.location.reload()
+      } else if (e.data === 'photos-changed') {
+        notifyPhotosChanged()
       } else if (e.data === 'display-mode:dashboard') {
         resetIdleTimerRef.current?.()
       } else if (e.data === 'display-mode:screensaver') {

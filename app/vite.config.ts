@@ -272,6 +272,7 @@ function photosPlugin(): Plugin {
 
     dest.on('finish', () => {
       if (rejected) return
+      broadcast('photos-changed')
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ name: final, url: `/uploads/${encodeURIComponent(final)}` }))
     })
@@ -289,6 +290,7 @@ function photosPlugin(): Plugin {
     const safe = path.basename(name)
     const filepath = path.join(UPLOADS_DIR, safe)
     if (fs.existsSync(filepath)) fs.unlinkSync(filepath)
+    broadcast('photos-changed')
     res.writeHead(200); res.end('OK')
   }
 
