@@ -127,18 +127,18 @@ export function loadSettings(): Settings {
   }
 }
 
-// Restores settings from server file on startup (survives browser localStorage wipes).
-// If server has data but localStorage is empty, server wins.
+// Restores settings from server file on startup. Server is authoritative — always wins.
 export async function syncSettingsFromServer(): Promise<void> {
   try {
     const res = await fetch('/api/settings')
     if (!res.ok) return
     const raw = await res.json() as unknown
     if (raw === null) return
+    const validated = validateSettings(raw)
+    const validatedStr = JSON.stringify(validated)
     const local = localStorage.getItem(KEY)
-    if (!local) {
-      const validated = validateSettings(raw)
-      localStorage.setItem(KEY, JSON.stringify(validated))
+    if (local !== validatedStr) {
+      localStorage.setItem(KEY, validatedStr)
       listeners.forEach(fn => { try { fn() } catch {} })
     }
   } catch { /* server unavailable — local-only is fine */ }

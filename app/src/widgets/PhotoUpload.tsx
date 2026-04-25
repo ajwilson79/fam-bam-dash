@@ -37,7 +37,8 @@ export default function PhotoUpload() {
           headers: { 'Content-Type': file.type, ...adminHeaders() },
           body: file,
         })
-        setProgress(p => p.map((x, idx) => idx === i ? { ...x, done: true, error: res.ok ? undefined : `HTTP ${res.status}` } : x))
+        const errMsg = res.status === 401 ? 'PIN required — close Settings and re-enter via ⚙' : `HTTP ${res.status}`
+        setProgress(p => p.map((x, idx) => idx === i ? { ...x, done: true, error: res.ok ? undefined : errMsg } : x))
       } catch (err) {
         setProgress(p => p.map((x, idx) => idx === i ? { ...x, done: true, error: String(err) } : x))
       }

@@ -69,8 +69,8 @@ export function saveState(state: TodoState) {
   broadcast()
 }
 
-// Called once on app startup: pulls the server file and reconciles with localStorage.
-// If the server has newer/different data (e.g. after a browser wipe) it wins.
+// Called once on app startup: pulls the server file and applies it to localStorage.
+// Server is the authoritative source — always wins over any cached local state.
 export async function syncFromServer(): Promise<void> {
   try {
     const res = await fetch('/api/todos')
@@ -78,12 +78,8 @@ export async function syncFromServer(): Promise<void> {
     const raw = await res.text()
     const serverState = parseState(raw)
     if (!serverState) return
-    // If the server has actual lists but localStorage is empty/default, restore from server
     const localRaw = localStorage.getItem(STORAGE_KEY)
-    const localState = localRaw ? parseState(localRaw) : null
-    const serverHasData = serverState.lists.some(l => l.items.length > 0 || l.name !== 'Family')
-    const localEmpty = !localState || (localState.lists.length === 1 && localState.lists[0].items.length === 0)
-    if (serverHasData && localEmpty) {
+    if (localRaw !== raw) {
       localStorage.setItem(STORAGE_KEY, raw)
       broadcast()
     }
