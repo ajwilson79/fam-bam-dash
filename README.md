@@ -15,7 +15,9 @@ Fam Bam Dash is a customizable, touch-friendly smart home dashboard designed to 
 - **Idle Screensaver / Picture Frame Mode** – After a configurable idle timeout (default 5 minutes), the display switches to a fullscreen photo slideshow; any touch, click, or keypress returns to the dashboard
 - **Motion Sensor Integration (optional)** – A PIR sensor on GPIO pin 17 wakes the screen on motion; configurable day/night behaviour (dashboard vs picture frame) and per-period screen-off timeouts, all adjustable from the browser
 - **Interactive To-Do Lists** – Per-person lists with checkboxes; checked items auto-remove after a configurable delay (default 10 minutes)
-- **Live Multi-Screen Sync** – Any change (settings or todos) made on one device instantly reloads all other open screens via Server-Sent Events; the screen that made the change is never disrupted
+- **Countdown Timers** – Tap the ⏱ button next to any future calendar event to add a countdown; cards appear at the top of the schedule showing time remaining; persist across restarts and sync instantly to all connected devices
+- **Exit Kiosk** – A PIN-gated "Exit Kiosk" button in the ⚙️ Settings tab closes Chromium so you can access the Pi desktop without a hard reboot
+- **Live Multi-Screen Sync** – Any change (settings, todos, or countdowns) made on one device instantly reloads all other open screens via Server-Sent Events; the screen that made the change is never disrupted
 - **Dark / Light Mode** – Toggle from the floating button on the dashboard
 - **Portrait-Optimized Layout** – Two-column grid scaled for tall screens
 - **Self-Hosted** – Runs entirely on Node.js; no separate backend required
@@ -38,7 +40,7 @@ Click the gear icon (bottom-right) to open Settings. The panel has four tabs:
 
 | Tab | What you configure |
 |-----|-------------------|
-| ⚙️ Settings | Weather ZIP code, units (°F/mph or °C/km/h), refresh interval, slideshow interval & shuffle, screensaver idle timeout, motion sensor night hours & screen-off timeouts, to-do auto-remove delay, dark/light theme |
+| ⚙️ Settings | Weather ZIP code, units (°F/mph or °C/km/h), refresh interval, slideshow interval & shuffle, screensaver idle timeout, motion sensor night hours & screen-off timeouts, to-do auto-remove delay, dark/light theme, exit kiosk (PIN gated) |
 | 📅 Calendars | Connect Google accounts via OAuth, sync calendar list, toggle individual calendars on/off |
 | 🖼️ Photos | Drag-and-drop photo upload; delete uploaded photos |
 | ✅ To-Do | Add/rename/delete lists and items; drag to reorder lists |
@@ -105,7 +107,7 @@ For OAuth:
 Open Settings → 🖼️ Photos, then drag-and-drop or click to upload. Photos are saved to `app/public/uploads/` and served at `/uploads/`.
 
 **Option B – Place files manually:**
-Copy files to `app/public/uploads/`. Supported formats: jpg, jpeg, png, gif, webp, avif.
+Copy files to `app/public/uploads/`. Supported formats: jpg, jpeg, png, gif, webp, avif. HEIC/HEIF files uploaded via the browser are automatically converted to JPEG server-side (`heif-convert` is installed by `pi-setup.sh`).
 
 ## Raspberry Pi Setup
 
@@ -116,7 +118,7 @@ chmod +x pi-setup.sh
 ./pi-setup.sh
 ```
 
-This installs Node.js 20, walks through `app/.env.local` configuration, builds the app, installs it as a systemd service, sets up Chromium kiosk mode, configures a Plymouth boot splash and session wallpaper (if images are present in `assets/`), optionally rotates the display to portrait, and optionally installs the PIR motion sensor service.
+This installs Node.js 20, walks through `app/.env.local` configuration, builds the app, installs it as a systemd service, sets up Chromium kiosk mode, configures a Plymouth boot splash and session wallpaper (if images are present in `assets/`), optionally rotates the display to portrait, optionally installs the PIR motion sensor service, and optionally configures a weekly reboot schedule for long-running kiosk health.
 
 ## Display Setup (non-Pi)
 
@@ -159,6 +161,11 @@ Vite Server (Node.js — runs in dev and vite preview)
   ├── /api/photos/upload     – saves to app/public/uploads/
   ├── /api/photos/list       – lists app/public/uploads/
   ├── /api/photos/delete     – deletes from app/public/uploads/
+  ├── /api/photos/thumb      – generates/serves 400×300 JPEG thumbnails (cached in .thumbs/)
+  ├── /api/admin/verify      – checks admin PIN; returns { ok, pinConfigured }
+  ├── /api/calendar-cache    – reads/writes app/data/calendar-cache.json (remote + offline fallback)
+  ├── /api/countdowns        – reads/writes app/data/countdowns.json (no PIN; SSE-synced)
+  ├── /api/quit-kiosk        – kills Chromium kiosk process (PIN gated)
   ├── /api/ical              – proxies GCAL_ICAL_URL (server-side, avoids CORS)
   ├── /api/gcal/*            – proxies Google Calendar REST API (server-side, avoids CORS)
   ├── /api/auth/token        – exchanges OAuth code for tokens (uses GOOGLE_CLIENT_SECRET)
