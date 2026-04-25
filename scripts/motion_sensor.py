@@ -65,68 +65,31 @@ def _wayland_env() -> dict:
             env["WAYLAND_DISPLAY"] = os.path.basename(sockets[0])
     return env
 
-def _wlr_outputs(env: dict) -> list:
-    """Return output names by parsing `wlr-randr` (lines that start in column 0)."""
-    try:
-        result = subprocess.run(
-            ["wlr-randr"], env=env, capture_output=True, timeout=5, check=False,
-        )
-        if result.returncode != 0:
-            return []
-        outputs = []
-        for line in result.stdout.decode(errors="replace").splitlines():
-            if line and not line[0].isspace():
-                outputs.append(line.split()[0])
-        return outputs
-    except Exception:
-        return []
-
 def _set_screen_power(on: bool):
-    """Drive screen power via wlr-randr (with wlopm as a last-resort fallback).
+    """Toggle screen DPMS via wlopm.
 
-    wlr-randr is preferred because `wlopm --on` doesn't always re-trigger the
-    EDID handshake on HDMI displays — they stay asleep after wake. wlr-randr
-    does a fuller output reconfigure, so the display reliably comes back.
+    Requires `video=HDMI-A-1:1920x1080@60e` (or similar) on the kernel cmdline
+    so the connector ignores the monitor's HPD-disconnect signal during DPMS
+    sleep — without that, wlroots removes the output entirely on --off and the
+    panel can't be woken without rebooting.
     """
     global _warned_no_tool
-    env = _wayland_env()
+    if not shutil.which("wlopm"):
+        if not _warned_no_tool:
+            print("wlopm not found — install with: sudo apt install wlopm")
+            _warned_no_tool = True
+        return
     state = "--on" if on else "--off"
-
-    if shutil.which("wlr-randr"):
-        outputs = _wlr_outputs(env)
-        if not outputs:
-            print("wlr-randr returned no outputs — Wayland session may not be ready yet")
-            return
-        for name in outputs:
-            try:
-                result = subprocess.run(
-                    ["wlr-randr", "--output", name, state],
-                    env=env, check=False, timeout=5,
-                    stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-                )
-                if result.returncode != 0:
-                    err = result.stderr.decode(errors="replace").strip()
-                    print(f"wlr-randr {state} {name} failed (rc={result.returncode}): {err}")
-            except Exception as e:
-                print(f"Failed to run wlr-randr on {name}: {e}")
-        return
-
-    if shutil.which("wlopm"):
-        try:
-            result = subprocess.run(
-                ["wlopm", state, "*"], env=env, check=False, timeout=5,
-                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-            )
-            if result.returncode != 0:
-                err = result.stderr.decode(errors="replace").strip()
-                print(f"wlopm {state} failed (rc={result.returncode}): {err}")
-        except Exception as e:
-            print(f"Failed to run wlopm: {e}")
-        return
-
-    if not _warned_no_tool:
-        print("Neither wlr-randr nor wlopm found — install with: sudo apt install wlr-randr")
-        _warned_no_tool = True
+    try:
+        result = subprocess.run(
+            ["wlopm", state, "*"], env=_wayland_env(), check=False, timeout=5,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+        if result.returncode != 0:
+            err = result.stderr.decode(errors="replace").strip()
+            print(f"wlopm {state} failed (rc={result.returncode}): {err}")
+    except Exception as e:
+        print(f"Failed to run wlopm: {e}")
 
 def screen_on():
     _set_screen_power(True)

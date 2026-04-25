@@ -27,6 +27,20 @@ if ! command -v wlopm &>/dev/null; then
     sudo apt-get install -y wlopm
 fi
 
+# Many HDMI panels signal "disconnected" the moment HDMI output stops during
+# DPMS sleep (notably the Acer UT241Y touchscreen). wlroots reacts by removing
+# the output entirely and the screen can't be woken without a reboot. Forcing
+# the connector to "always enabled" via the kernel cmdline tells the kernel to
+# ignore HPD changes, so labwc keeps the output around and wlopm --on works.
+CMDLINE=/boot/firmware/cmdline.txt
+[ -f "$CMDLINE" ] || CMDLINE=/boot/cmdline.txt
+if [ -f "$CMDLINE" ] && ! grep -q "video=HDMI-A-1:" "$CMDLINE"; then
+    echo "Adding video=HDMI-A-1:1920x1080@60e to $CMDLINE for reliable DPMS wake..."
+    sudo cp "$CMDLINE" "$CMDLINE.bak"
+    sudo sed -i 's|$| video=HDMI-A-1:1920x1080@60e|' "$CMDLINE"
+    NEEDS_REBOOT=true
+fi
+
 RUN_USER="${SUDO_USER:-$USER}"
 USER_UID=$(id -u "$RUN_USER")
 RUN_USER_HOME=$(getent passwd "$RUN_USER" | cut -d: -f6)
@@ -70,3 +84,9 @@ echo "  Status:  sudo systemctl status fam-bam-motion"
 echo "  Logs:    journalctl -u fam-bam-motion -f"
 echo "  Stop:    sudo systemctl stop fam-bam-motion"
 echo "  Remove:  sudo systemctl disable fam-bam-motion && sudo rm $SERVICE_FILE"
+
+if [ "${NEEDS_REBOOT:-}" = "true" ]; then
+    echo ""
+    echo "*** Reboot required: kernel cmdline was updated for reliable HDMI DPMS. ***"
+    echo "    Run: sudo reboot"
+fi
