@@ -111,7 +111,7 @@ export default function PhotoUpload() {
         <div className="photo-grid">
           {photos.map(photo => (
             <div key={photo.name} className="photo-thumb">
-              <img src={photo.url} alt={photo.name} loading="lazy" />
+              <img src={`/api/photos/thumb?name=${encodeURIComponent(photo.name)}`} alt={photo.name} loading="lazy" />
               <button
                 className="photo-thumb-delete"
                 onClick={() => deletePhoto(photo.name)}

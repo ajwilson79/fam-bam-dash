@@ -206,11 +206,13 @@ function todosPlugin(): Plugin {
 // ── Photos plugin ─────────────────────────────────────────────────────────────
 
 const UPLOADS_DIR = path.resolve('public/uploads')
+const THUMBS_DIR = path.resolve('public/uploads/.thumbs')
 const IMAGE_RE = /\.(jpe?g|png|gif|webp|avif)$/i
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024 // 25 MB — caps per-file upload to prevent disk-fill DoS
 
 function photosPlugin(): Plugin {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true })
+  fs.mkdirSync(THUMBS_DIR, { recursive: true })
 
   const listHandler: http.RequestListener = (_req, res) => {
     const files = fs.readdirSync(UPLOADS_DIR)
@@ -290,8 +292,37 @@ function photosPlugin(): Plugin {
     const safe = path.basename(name)
     const filepath = path.join(UPLOADS_DIR, safe)
     if (fs.existsSync(filepath)) fs.unlinkSync(filepath)
+    const thumbPath = path.join(THUMBS_DIR, safe + '.thumb.jpg')
+    if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath)
     broadcast('photos-changed')
     res.writeHead(200); res.end('OK')
+  }
+
+  const thumbHandler: http.RequestListener = async (req, res) => {
+    const name = new URL(req.url ?? '/', 'http://x').searchParams.get('name')
+    if (!name || !IMAGE_RE.test(name)) { res.writeHead(400); res.end('Bad name'); return }
+    const safe = path.basename(name)
+    const originalPath = path.join(UPLOADS_DIR, safe)
+    if (!fs.existsSync(originalPath)) { res.writeHead(404); res.end('Not found'); return }
+    const thumbPath = path.join(THUMBS_DIR, safe + '.thumb.jpg')
+    try {
+      if (!fs.existsSync(thumbPath)) {
+        const sharp = (await import('sharp')).default
+        await sharp(originalPath)
+          .resize(400, 300, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 75 })
+          .toFile(thumbPath)
+      }
+      const stat = fs.statSync(thumbPath)
+      const etag = `"${stat.mtime.getTime()}-${stat.size}"`
+      if (req.headers['if-none-match'] === etag) { res.writeHead(304); res.end(); return }
+      res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400', 'ETag': etag })
+      fs.createReadStream(thumbPath).pipe(res)
+    } catch {
+      // Fallback: serve original if sharp fails
+      res.writeHead(200, { 'Content-Type': 'image/jpeg' })
+      fs.createReadStream(originalPath).pipe(res)
+    }
   }
 
   // In preview mode Vite serves dist/ (a build snapshot), so newly uploaded files in
@@ -306,7 +337,10 @@ function photosPlugin(): Plugin {
     if (!fs.existsSync(filepath)) { next(); return }
     const ext = path.extname(filename).toLowerCase()
     const mime: Record<string, string> = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif' }
-    res.writeHead(200, { 'Content-Type': mime[ext] ?? 'application/octet-stream' })
+    const stat = fs.statSync(filepath)
+    const etag = `"${stat.mtime.getTime()}-${stat.size}"`
+    if (req.headers['if-none-match'] === etag) { res.writeHead(304); res.end(); return }
+    res.writeHead(200, { 'Content-Type': mime[ext] ?? 'application/octet-stream', 'Cache-Control': 'public, max-age=3600', 'ETag': etag })
     fs.createReadStream(filepath).pipe(res)
   }
 
@@ -319,6 +353,7 @@ function photosPlugin(): Plugin {
     s.middlewares.use('/api/photos/list', listHandler)
     s.middlewares.use('/api/photos/upload', uploadHandler)
     s.middlewares.use('/api/photos/delete', deleteHandler)
+    s.middlewares.use('/api/photos/thumb', thumbHandler)
   }
 
   return {
