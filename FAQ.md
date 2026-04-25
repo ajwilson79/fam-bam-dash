@@ -195,12 +195,12 @@ No. It's entirely optional. The dashboard and all other features work without on
 A PIR (passive infrared) motion sensor wired to **GPIO pin 17** on your Raspberry Pi. The script uses the `gpiozero` Python library, which is standard on Raspberry Pi OS.
 
 ### How do I set it up?
-Run `scripts/motion-sensor-setup.sh` on the Pi. It installs `gpiozero` if needed and creates a `fam-bam-motion` systemd service that starts automatically on boot.
+Run `scripts/motion-sensor-setup.sh` on the Pi. It installs `gpiozero` and `wlopm`, adds your user to the `gpio` group, ensures `/boot/firmware/cmdline.txt` has the kernel parameter needed for reliable HDMI DPMS wake, and creates a `fam-bam-motion` systemd service that starts automatically on boot. A reboot is required if the cmdline was modified.
 
 ### What does the motion sensor do exactly?
 - **Day hours + motion** → wakes the screen and shows the full dashboard
 - **Night hours + motion** → wakes the screen and shows the picture frame screensaver (less jarring at 2am)
-- **No motion for configured timeout** → turns the screen off via `xset dpms`
+- **No motion for configured timeout** → turns the screen off via `wlopm` (Wayland DPMS)
 
 ### How do I configure the night hours and timeouts?
 In the app: Settings → ⚙️ Settings → 🚶 Motion Sensor. Changes take effect within 60 seconds without restarting the script.

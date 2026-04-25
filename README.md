@@ -166,7 +166,7 @@ Vite Server (Node.js — runs in dev and vite preview)
   └── /api/display-mode      – accepts POST from motion sensor script; broadcasts mode via SSE
 
 Motion Sensor (optional, scripts/motion_sensor.py)
-  └── Reads settings from /api/settings, POSTs to /api/display-mode, controls screen power via xset
+  └── Reads settings from /api/settings, POSTs to /api/display-mode, controls screen power via wlopm (Wayland DPMS)
 ```
 
 ## Documentation

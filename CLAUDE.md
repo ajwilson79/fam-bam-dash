@@ -46,7 +46,7 @@ Vite Node.js process
 scripts/motion_sensor.py (optional, Raspberry Pi only)
     → reads settings from /api/settings every 60s
     → POSTs to /api/display-mode on motion state change
-    → controls screen power directly via xset dpms
+    → controls screen power directly via wlopm (Wayland DPMS)
 ```
 
 ## State Management
@@ -127,4 +127,4 @@ Manage with a systemd service (see conversation history for an example unit file
 
 `scripts/splash-setup.sh` installs the Plymouth boot splash (using `assets/splash-boot.png`) and sets the Wayland session wallpaper via `swaybg` (using `assets/splash.png`). Can be run standalone. `assets/splash-boot.png` should be pre-rotated to appear correctly during boot (before the OS applies display rotation); `assets/splash.png` is in normal orientation.
 
-`scripts/motion-sensor-setup.sh` is optional — installs the `fam-bam-motion` systemd service. Only needed when a PIR sensor is wired to GPIO pin 17.
+`scripts/motion-sensor-setup.sh` is optional — installs the `fam-bam-motion` systemd service. Only needed when a PIR sensor is wired to GPIO pin 17. It also installs `wlopm`, adds the run user to the `gpio` group, and appends `video=HDMI-A-1:1920x1080@60e` to `/boot/firmware/cmdline.txt` so the kernel ignores HPD-disconnect during DPMS sleep — without this kernel parameter, panels that drop HPD on power-off (e.g. Acer UT241Y) make wlroots hot-unplug the output and the screen can't be woken without a reboot. A reboot is required after first install.

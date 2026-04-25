@@ -185,12 +185,22 @@ The theme toggle writes settings to the server, which requires the PIN. Without 
 ### Script exits immediately with "Motion sensor not available"
 - Confirm the PIR sensor is wired to GPIO pin 17
 - Install the library: `sudo apt-get install python3-gpiozero`
+- Confirm the run user is in the `gpio` group: `groups` should list `gpio`. If not: `sudo usermod -aG gpio $USER` then reboot. (`motion-sensor-setup.sh` does this automatically for fresh installs.)
 - Run the script manually to see the full error: `python3 scripts/motion_sensor.py`
 
+### Screen never turns off, or won't wake after going off
+The motion script uses `wlopm` (Wayland DPMS) to drive screen power on Raspberry Pi OS Bookworm + labwc. Two common failure modes:
+
+1. **Screen never goes off** — `wlopm` not installed. Fix: `sudo apt install wlopm`.
+
+2. **Screen goes off but never wakes (requires reboot to recover)** — Some HDMI panels (e.g. Acer UT241Y touchscreens) signal HPD-disconnect during DPMS sleep. wlroots reacts by removing the output entirely, and `wlopm --on` has nothing to wake. Fix: add `video=HDMI-A-1:1920x1080@60e` to `/boot/firmware/cmdline.txt` (single line, space-separated), then reboot. The `e` flag tells the kernel to ignore HPD changes for that connector. `motion-sensor-setup.sh` adds this automatically and prints a reboot reminder.
+
+To verify the fix is working, after `wlopm --off '*'` runs, `wlopm` (no args) should still list `HDMI-A-1 off`. If it switches to `NOOP-1`, the connector got hot-unplugged and the kernel parameter is missing.
+
 ### Screen doesn't turn on when motion is detected
-- Verify `DISPLAY=:0` is set in the systemd service environment (required for `xset` to find the display)
-- Test `xset dpms force on` manually in a terminal on the Pi to confirm `xset` works
-- Check logs: `journalctl -u fam-bam-motion -f`
+- Check logs: `journalctl -u fam-bam-motion -f` — look for `wlopm ... failed` lines
+- Verify the systemd service has `XDG_RUNTIME_DIR=/run/user/<UID>` set; without it, `wlopm` can't find the Wayland socket
+- Confirm `WAYLAND_DISPLAY` resolves: `ls /run/user/$(id -u)/wayland-*` should list one socket while the kiosk is running
 
 ### App doesn't switch to dashboard/screensaver mode when motion is detected
 - Confirm the fam-bam-dash server is running and reachable at `http://localhost:12000`
