@@ -24,7 +24,7 @@ export default function PhotoUpload() {
   useEffect(() => { fetchList() }, [])
 
   async function uploadFiles(files: File[]) {
-    const images = files.filter(f => f.type.startsWith('image/'))
+    const images = files.filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name))
     if (images.length === 0) return
 
     setProgress(images.map(f => ({ name: f.name, done: false })))
@@ -74,7 +74,7 @@ export default function PhotoUpload() {
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif"
           multiple
           style={{ display: 'none' }}
           onChange={e => e.target.files && uploadFiles(Array.from(e.target.files))}

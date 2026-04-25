@@ -251,7 +251,9 @@ function todosPlugin(): Plugin {
 
 const UPLOADS_DIR = path.resolve('public/uploads')
 const THUMBS_DIR = path.resolve('public/uploads/.thumbs')
-const IMAGE_RE = /\.(jpe?g|png|gif|webp|avif)$/i
+const IMAGE_RE = /\.(jpe?g|png|gif|webp|avif)$/i       // storable / serveable types
+const UPLOADABLE_RE = /\.(jpe?g|png|gif|webp|avif|heic|heif)$/i  // also accepts HEIC for conversion
+const HEIC_RE = /\.(heic|heif)$/i
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024 // 25 MB — caps per-file upload to prevent disk-fill DoS
 
 function photosPlugin(): Plugin {
@@ -274,7 +276,7 @@ function photosPlugin(): Plugin {
 
     // Reject non-image extensions. Uploads are served as static files under /uploads/,
     // so allowing .html/.svg/etc would be a same-origin stored-XSS vector.
-    if (!IMAGE_RE.test(safe)) {
+    if (!UPLOADABLE_RE.test(safe)) {
       res.writeHead(400, { 'Content-Type': 'application/json' })
       res.end('{"error":"unsupported file type"}')
       return
@@ -288,14 +290,20 @@ function photosPlugin(): Plugin {
       return
     }
 
-    const ext = path.extname(safe)
-    const base = path.basename(safe, ext)
-    let final = safe
+    const isHeic = HEIC_RE.test(safe)
+    const origExt = path.extname(safe)
+    const base = path.basename(safe, origExt)
+    // HEIC files are converted to JPEG — find a non-colliding .jpg name
+    const storeExt = isHeic ? '.jpg' : origExt
+    let final = base + storeExt
     let n = 1
-    while (fs.existsSync(path.join(UPLOADS_DIR, final))) final = `${base}-${n++}${ext}`
+    while (fs.existsSync(path.join(UPLOADS_DIR, final))) final = `${base}-${n++}${storeExt}`
 
-    const finalPath = path.join(UPLOADS_DIR, final)
-    const dest = fs.createWriteStream(finalPath)
+    // Stream the upload to a temp path so conversion can write the real destination cleanly
+    const tmpPath = isHeic
+      ? path.join(UPLOADS_DIR, `__tmp_${Date.now()}${origExt}`)
+      : path.join(UPLOADS_DIR, final)
+    const dest = fs.createWriteStream(tmpPath)
 
     let received = 0
     let rejected = false
@@ -307,7 +315,7 @@ function photosPlugin(): Plugin {
         rejected = true
         req.unpipe(dest)
         dest.destroy()
-        fs.unlink(finalPath, () => { /* ignore */ })
+        fs.unlink(tmpPath, () => { /* ignore */ })
         req.destroy()
         res.writeHead(413, { 'Content-Type': 'application/json' })
         res.end('{"error":"file too large"}')
@@ -316,8 +324,21 @@ function photosPlugin(): Plugin {
 
     req.pipe(dest)
 
-    dest.on('finish', () => {
+    dest.on('finish', async () => {
       if (rejected) return
+      if (isHeic) {
+        const finalPath = path.join(UPLOADS_DIR, final)
+        try {
+          const sharp = (await import('sharp')).default
+          await sharp(tmpPath).jpeg({ quality: 90 }).toFile(finalPath)
+        } catch {
+          res.writeHead(500, { 'Content-Type': 'application/json' })
+          res.end('{"error":"HEIC conversion failed"}')
+          return
+        } finally {
+          fs.unlink(tmpPath, () => { /* remove temp regardless */ })
+        }
+      }
       broadcast('photos-changed')
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ name: final, url: `/uploads/${encodeURIComponent(final)}` }))
