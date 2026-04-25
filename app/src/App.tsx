@@ -180,13 +180,6 @@ function App() {
         />
       )}
 
-      {/* Hidden tap zone — bottom-left corner; tap to exit kiosk (PIN required) */}
-      <div
-        className="fixed bottom-0 left-0 w-14 h-14 z-50"
-        style={{ WebkitTapHighlightColor: 'transparent' }}
-        onClick={() => setQuitKioskOpen(true)}
-      />
-
       {/* Idle screensaver — fullscreen photo frame, dismissed by any interaction */}
       {isIdle && (
         <div className="fixed inset-0 z-40 bg-black" style={{ width: '100vw', height: '100vh' }}>
@@ -199,6 +192,14 @@ function App() {
 
       <SettingsPanel open={openSettings} onClose={() => setOpenSettings(false)} />
       <VirtualKeyboard />
+
+      {/* Hidden tap zone — bottom-left corner; tap to exit kiosk (PIN required).
+          Rendered last so it is always on top. z-[999] beats the vkb overlay (z-200). */}
+      <div
+        className="fixed bottom-0 left-0 w-16 h-16 z-[999]"
+        style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'none' }}
+        onPointerDown={() => setQuitKioskOpen(true)}
+      />
     </div>
   )
 }
