@@ -292,13 +292,41 @@ function photosPlugin(): Plugin {
     res.writeHead(200); res.end('OK')
   }
 
-  const attach = (s: { middlewares: { use: (p: string, h: http.RequestListener) => void } }) => {
+  // In preview mode Vite serves dist/ (a build snapshot), so newly uploaded files in
+  // public/uploads/ are invisible. This middleware serves them directly from disk.
+  type Middleware = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void
+  const uploadsMiddleware: Middleware = (req, res, next) => {
+    const url = req.url ?? ''
+    if (!url.startsWith('/uploads/')) { next(); return }
+    const filename = path.basename(decodeURIComponent(url.slice('/uploads/'.length).split('?')[0]))
+    if (!IMAGE_RE.test(filename)) { next(); return }
+    const filepath = path.join(UPLOADS_DIR, filename)
+    if (!fs.existsSync(filepath)) { next(); return }
+    const ext = path.extname(filename).toLowerCase()
+    const mime: Record<string, string> = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif' }
+    res.writeHead(200, { 'Content-Type': mime[ext] ?? 'application/octet-stream' })
+    fs.createReadStream(filepath).pipe(res)
+  }
+
+  type UseMethod = {
+    (fn: Middleware): void
+    (path: string, fn: http.RequestListener): void
+  }
+  type AttachServer = { middlewares: { use: UseMethod } }
+  const attachApi = (s: AttachServer) => {
     s.middlewares.use('/api/photos/list', listHandler)
     s.middlewares.use('/api/photos/upload', uploadHandler)
     s.middlewares.use('/api/photos/delete', deleteHandler)
   }
 
-  return { name: 'photos', configureServer: attach, configurePreviewServer: attach }
+  return {
+    name: 'photos',
+    configureServer(s: AttachServer) { attachApi(s) },
+    configurePreviewServer(s: AttachServer) {
+      s.middlewares.use(uploadsMiddleware)
+      attachApi(s)
+    },
+  }
 }
 
 // ── Display mode plugin ───────────────────────────────────────────────────────
