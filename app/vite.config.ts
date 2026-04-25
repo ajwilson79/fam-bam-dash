@@ -5,7 +5,7 @@ import * as https from 'node:https'
 import * as http from 'node:http'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { exec } from 'node:child_process'
+import { exec, execFile } from 'node:child_process'
 import type { Plugin } from 'vite'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -324,20 +324,25 @@ function photosPlugin(): Plugin {
 
     req.pipe(dest)
 
-    dest.on('finish', async () => {
+    dest.on('finish', () => {
       if (rejected) return
       if (isHeic) {
         const finalPath = path.join(UPLOADS_DIR, final)
-        try {
-          const sharp = (await import('sharp')).default
-          await sharp(tmpPath).jpeg({ quality: 90 }).toFile(finalPath)
-        } catch {
-          res.writeHead(500, { 'Content-Type': 'application/json' })
-          res.end('{"error":"HEIC conversion failed"}')
-          return
-        } finally {
-          fs.unlink(tmpPath, () => { /* remove temp regardless */ })
-        }
+        // sharp on this Pi only handles AVIF, not HEVC-encoded HEIC — use ffmpeg instead
+        execFile('ffmpeg', ['-i', tmpPath, '-q:v', '2', '-y', '-loglevel', 'error', finalPath],
+          (err) => {
+            fs.unlink(tmpPath, () => {})
+            if (err) {
+              res.writeHead(500, { 'Content-Type': 'application/json' })
+              res.end('{"error":"HEIC conversion failed"}')
+              return
+            }
+            broadcast('photos-changed')
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ name: final, url: `/uploads/${encodeURIComponent(final)}` }))
+          }
+        )
+        return
       }
       broadcast('photos-changed')
       res.writeHead(200, { 'Content-Type': 'application/json' })
