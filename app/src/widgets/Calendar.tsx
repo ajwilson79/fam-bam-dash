@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchUpcomingEvents, type GCalEvent } from '../lib/gcal'
 import { loadSettings, subscribeSettings } from '../lib/settings'
 import { debounce } from '../lib/utils'
+
+export type CountdownEntry = { id: string; title: string; dateTime: string }
 
 function getDayLabel(dayStart: Date, todayStart: Date): string {
   const diff = Math.round((dayStart.getTime() - todayStart.getTime()) / 86400000)
@@ -43,6 +45,63 @@ function groupByDay(events: GCalEvent[]): Array<{ key: string; label: string; ev
     .map(([key, val]) => ({ key, ...val }))
 }
 
+function getEventDateTime(ev: GCalEvent): Date | null {
+  const raw = ev.start.dateTime ?? (ev.start.date ? ev.start.date + 'T00:00:00' : null)
+  return raw ? new Date(raw) : null
+}
+
+function formatCountdown(dateTime: string): string {
+  const diff = new Date(dateTime).getTime() - Date.now()
+  if (diff <= 0) return 'Today!'
+  const days = Math.floor(diff / 86400000)
+  const hours = Math.floor((diff % 86400000) / 3600000)
+  const mins = Math.floor((diff % 3600000) / 60000)
+  if (days > 0) return `${days}d ${hours}h`
+  if (hours > 0) return `${hours}h ${mins}m`
+  return `${mins}m`
+}
+
+async function loadCountdowns(): Promise<CountdownEntry[]> {
+  try {
+    const res = await fetch('/api/countdowns')
+    if (!res.ok) return []
+    const data = await res.json() as unknown
+    return Array.isArray(data) ? (data as CountdownEntry[]) : []
+  } catch {
+    return []
+  }
+}
+
+function saveCountdowns(entries: CountdownEntry[]): void {
+  fetch('/api/countdowns', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entries),
+  }).catch(() => {})
+}
+
+function CountdownSection({ countdowns }: { countdowns: CountdownEntry[] }) {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const future = countdowns.filter(cd => new Date(cd.dateTime).getTime() > Date.now())
+  if (future.length === 0) return null
+
+  return (
+    <div className="countdown-section">
+      {future.map(cd => (
+        <div key={cd.id} className="countdown-card">
+          <span className="countdown-name">{cd.title}</span>
+          <span className="countdown-time">{formatCountdown(cd.dateTime)}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function CalendarSkeleton() {
   return (
     <div className="agenda-wrap">
@@ -61,6 +120,13 @@ function CalendarSkeleton() {
 export default function Calendar() {
   const [events, setEvents] = useState<GCalEvent[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [countdowns, setCountdowns] = useState<CountdownEntry[]>([])
+  const isCleaningRef = useRef(false)
+
+  // Load persisted countdowns from server on mount
+  useEffect(() => {
+    loadCountdowns().then(setCountdowns)
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -73,9 +139,22 @@ export default function Calendar() {
         const evs = await fetchUpcomingEvents({
           calendarId: s.calendar.calendarId,
           maxResults: 100,
-          windowDays: 30,
+          windowDays: 90,
         })
-        if (mounted) setEvents(evs)
+        if (mounted) {
+          setEvents(evs)
+          // Auto-remove countdowns whose event date has passed
+          setCountdowns(prev => {
+            const now = Date.now()
+            const active = prev.filter(cd => new Date(cd.dateTime).getTime() > now)
+            if (active.length !== prev.length) {
+              isCleaningRef.current = true
+              saveCountdowns(active)
+              isCleaningRef.current = false
+            }
+            return active
+          })
+        }
       } catch (e) {
         if (mounted) setError(e instanceof Error ? e.message : 'Calendar failed')
       }
@@ -97,6 +176,23 @@ export default function Calendar() {
     }
   }, [])
 
+  function toggleCountdown(ev: GCalEvent) {
+    const dt = getEventDateTime(ev)
+    if (!dt || dt.getTime() <= Date.now()) return
+    setCountdowns(prev => {
+      const isActive = prev.some(c => c.id === ev.id)
+      const updated: CountdownEntry[] = isActive
+        ? prev.filter(c => c.id !== ev.id)
+        : [...prev, {
+            id: ev.id,
+            title: ev.summary || 'Untitled',
+            dateTime: ev.start.dateTime ?? (ev.start.date! + 'T00:00:00'),
+          }]
+      saveCountdowns(updated)
+      return updated
+    })
+  }
+
   if (error) return (
     <div className="agenda-wrap">
       <div className="widget-label">Schedule</div>
@@ -107,30 +203,41 @@ export default function Calendar() {
   if (!events) return <CalendarSkeleton />
 
   const days = groupByDay(events)
-
-  if (days.length === 0) return (
-    <div className="agenda-wrap">
-      <div className="widget-label">Schedule</div>
-      <div className="text-theme-muted" style={{ fontSize: '0.8rem' }}>No upcoming events</div>
-    </div>
-  )
+  const countdownIds = new Set(countdowns.map(c => c.id))
 
   return (
     <div className="agenda-wrap">
+      <CountdownSection countdowns={countdowns} />
       <div className="widget-label">Schedule</div>
-      {days.map(day => (
+      {days.length === 0 ? (
+        <div className="text-theme-muted" style={{ fontSize: '0.8rem' }}>No upcoming events</div>
+      ) : days.map(day => (
         <div key={day.key} className="agenda-day">
           <div className="agenda-day-label">{day.label}</div>
-          {day.events.map(ev => (
-            <div key={ev.id} className="agenda-event">
-              <span
-                className="agenda-event-dot"
-                style={ev.calendarColor ? { background: ev.calendarColor } : { visibility: 'hidden' }}
-              />
-              <div className="agenda-event-time">{eventTimeShort(ev)}</div>
-              <div className="agenda-event-title">{ev.summary || 'Untitled'}</div>
-            </div>
-          ))}
+          {day.events.map(ev => {
+            const dt = getEventDateTime(ev)
+            const isFuture = dt !== null && dt.getTime() > Date.now()
+            const isActive = countdownIds.has(ev.id)
+            return (
+              <div key={ev.id} className="agenda-event">
+                <span
+                  className="agenda-event-dot"
+                  style={ev.calendarColor ? { background: ev.calendarColor } : { visibility: 'hidden' }}
+                />
+                <div className="agenda-event-time">{eventTimeShort(ev)}</div>
+                <div className="agenda-event-title">{ev.summary || 'Untitled'}</div>
+                {isFuture && (
+                  <button
+                    className={`countdown-toggle${isActive ? ' is-active' : ''}`}
+                    onClick={() => toggleCountdown(ev)}
+                    title={isActive ? 'Remove countdown' : 'Add countdown'}
+                  >
+                    ⏱
+                  </button>
+                )}
+              </div>
+            )
+          })}
         </div>
       ))}
     </div>

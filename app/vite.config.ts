@@ -247,6 +247,50 @@ function todosPlugin(): Plugin {
   return { name: 'todos', configureServer: attach, configurePreviewServer: attach }
 }
 
+// ── Countdowns plugin ─────────────────────────────────────────────────────────
+
+const COUNTDOWNS_FILE = path.resolve('data/countdowns.json')
+
+function countdownsPlugin(): Plugin {
+  fs.mkdirSync(path.dirname(COUNTDOWNS_FILE), { recursive: true })
+  if (!fs.existsSync(COUNTDOWNS_FILE)) fs.writeFileSync(COUNTDOWNS_FILE, '[]', 'utf-8')
+
+  type Middleware = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void
+  const middleware: Middleware = (req, res, next) => {
+    if (!req.url?.startsWith('/api/countdowns')) { next(); return }
+    if (req.method === 'GET') {
+      try {
+        const data = fs.readFileSync(COUNTDOWNS_FILE, 'utf-8')
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(data)
+      } catch {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end('[]')
+      }
+      return
+    }
+    if (req.method === 'POST') {
+      let body = ''
+      req.on('data', (chunk: Buffer) => { body += chunk.toString() })
+      req.on('end', () => {
+        try {
+          JSON.parse(body)
+          fs.writeFileSync(COUNTDOWNS_FILE, body, 'utf-8')
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end('{"ok":true}')
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end('{"error":"invalid json"}')
+        }
+      })
+      return
+    }
+    next()
+  }
+  const attach = (s: { middlewares: { use: (h: Middleware) => void } }) => { s.middlewares.use(middleware) }
+  return { name: 'countdowns', configureServer: attach, configurePreviewServer: attach }
+}
+
 // ── Photos plugin ─────────────────────────────────────────────────────────────
 
 const UPLOADS_DIR = path.resolve('public/uploads')
@@ -645,7 +689,7 @@ export default defineConfig(({ mode }) => {
   Object.assign(process.env, env)
 
   return {
-    plugins: [react(), settingsPlugin(), todosPlugin(), photosPlugin(), displayModePlugin(), icalProxyPlugin(), gcalProxyPlugin(), oauthPlugin()],
+    plugins: [react(), settingsPlugin(), todosPlugin(), countdownsPlugin(), photosPlugin(), displayModePlugin(), icalProxyPlugin(), gcalProxyPlugin(), oauthPlugin()],
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/__tests__/setup.ts'],
