@@ -42,6 +42,7 @@ Vite Node.js process
     ├── /api/photos/thumb    → generate/serve 400×300 JPEG thumbnail (cached in public/uploads/.thumbs/)
     ├── /uploads/*           → serve public/uploads/ directly (preview mode only; dev serves it natively)
     ├── /api/sse             → Server-Sent Events (multi-tab sync + display mode + photo changes)
+    ├── /api/admin/verify    → check admin PIN status; returns { ok, pinConfigured }
     ├── /api/display-mode    → accepts POST from motion sensor; broadcasts via SSE
     ├── /api/ical            → server-side proxy for iCal feed (bypasses CORS)
     ├── /api/gcal/*          → server-side proxy for Google Calendar API
@@ -76,6 +77,7 @@ app/src/
 ├── lib/
 │   ├── settings.ts        # Settings pub/sub + server sync
 │   ├── todo.ts            # Todo pub/sub + auto-remove logic
+│   ├── admin.ts           # Admin PIN storage, adminHeaders(), verifyAdminAccess()
 │   ├── gcal.ts            # Calendar fetch: OAuth → iCal → JSON API fallback chain
 │   ├── gapi.ts            # Google Calendar REST API calls
 │   ├── oauth.ts           # PKCE flow, token storage, auto-refresh
@@ -104,12 +106,13 @@ Defined in `app/.env.local` (gitignored). Use `app/.env.example` as a template.
 | Variable | Where used | Purpose |
 |---|---|---|
 | `VITE_GOOGLE_CLIENT_ID` | Browser | OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Server only | OAuth token exchange |
+| `GOOGLE_CLIENT_SECRET` | Server only | OAuth token exchange (never sent to browser) |
 | `VITE_LAT` / `VITE_LON` | Browser | Fallback weather coordinates |
-| `VITE_GCAL_API_KEY` | Browser | Calendar JSON API fallback |
-| `VITE_TIMEZONE` | Browser | Calendar display timezone |
+| `VITE_GCAL_API_KEY` | Browser | Calendar JSON API fallback key |
+| `VITE_GCAL_CALENDAR_ID` | Browser | Default calendar ID (e.g. `user@gmail.com`) |
+| `VITE_TIMEZONE` | Browser | Calendar display timezone (e.g. `America/New_York`) |
 | `GCAL_ICAL_URL` | Server only | iCal feed URL (proxied to avoid CORS) |
-| `VITE_GOOGLE_PHOTOS_ALBUM_ID` | Browser | Google Photos album |
+| `VITE_GOOGLE_PHOTOS_ALBUM_ID` | Browser | Google Photos album ID |
 | `FAM_BAM_ADMIN_PIN` | Server only | If set, gates admin mutations (settings write, photo upload/delete, OAuth token exchange) behind an `X-Admin-Pin` header. Dashboard reads and todo writes stay open. Blank = disabled. |
 
 ## Adding Features
