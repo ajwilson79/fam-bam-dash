@@ -29,6 +29,15 @@ fi
 
 RUN_USER="${SUDO_USER:-$USER}"
 USER_UID=$(id -u "$RUN_USER")
+RUN_USER_HOME=$(getent passwd "$RUN_USER" | cut -d: -f6)
+
+# lgpio (Pi 5 GPIO backend) requires the user to be in the 'gpio' group to
+# access /dev/gpiochip*. Default 'pi' user is in it; freshly-created users
+# (e.g. 'tony') are not.
+if ! id -nG "$RUN_USER" | tr ' ' '\n' | grep -qx gpio; then
+    echo "Adding $RUN_USER to gpio group..."
+    sudo usermod -aG gpio "$RUN_USER"
+fi
 
 echo "Creating systemd service at $SERVICE_FILE..."
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF
@@ -42,6 +51,8 @@ ExecStart=/usr/bin/python3 $SCRIPT_PATH
 Restart=on-failure
 RestartSec=10
 User=$RUN_USER
+WorkingDirectory=$RUN_USER_HOME
+Environment=HOME=$RUN_USER_HOME
 Environment=XDG_RUNTIME_DIR=/run/user/$USER_UID
 
 [Install]
