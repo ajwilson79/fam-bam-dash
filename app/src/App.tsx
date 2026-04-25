@@ -22,6 +22,38 @@ function App() {
   const [isIdle, setIsIdle] = useState(false)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resetIdleTimerRef = useRef<(() => void) | null>(null)
+  const dashLeftRef = useRef<HTMLElement>(null)
+
+  // Pointer-drag scroll — handles touch screens on Pi/Wayland that report
+  // touch as pointer events instead of Web Touch Events (touch-action: pan-y
+  // has no effect in that case). 8px threshold distinguishes tap from scroll.
+  useEffect(() => {
+    const el: HTMLElement | null = dashLeftRef.current
+    if (!el) return
+    const target: HTMLElement = el  // narrowed const — safe to use in closures
+    let startY = 0, startScrollTop = 0, activeId = -1, dragging = false
+    function down(e: PointerEvent) {
+      startY = e.clientY; startScrollTop = target.scrollTop
+      activeId = e.pointerId; dragging = false
+    }
+    function move(e: PointerEvent) {
+      if (e.pointerId !== activeId) return
+      const dy = e.clientY - startY
+      if (!dragging && Math.abs(dy) > 8) { dragging = true; target.setPointerCapture(activeId) }
+      if (dragging) target.scrollTop = startScrollTop - dy
+    }
+    function up(e: PointerEvent) { if (e.pointerId === activeId) { dragging = false; activeId = -1 } }
+    target.addEventListener('pointerdown', down)
+    target.addEventListener('pointermove', move)
+    target.addEventListener('pointerup', up)
+    target.addEventListener('pointercancel', up)
+    return () => {
+      target.removeEventListener('pointerdown', down)
+      target.removeEventListener('pointermove', move)
+      target.removeEventListener('pointerup', up)
+      target.removeEventListener('pointercancel', up)
+    }
+  }, [])
 
   // Checks the server's admin-PIN gate, then either opens Settings or prompts for a PIN.
   async function requestOpenSettings() {
@@ -113,7 +145,7 @@ function App() {
 
   return (
     <div className="dash-root" data-theme={theme}>
-      <aside className="dash-left">
+      <aside className="dash-left" ref={dashLeftRef}>
         <Calendar />
       </aside>
 
