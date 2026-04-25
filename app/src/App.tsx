@@ -71,6 +71,8 @@ function App() {
         if (senderTabId !== getTabId()) window.location.reload()
       } else if (e.data === 'photos-changed') {
         notifyPhotosChanged()
+      } else if (e.data === 'countdowns-changed') {
+        window.dispatchEvent(new CustomEvent('countdowns-changed'))
       } else if (e.data === 'display-mode:dashboard') {
         resetIdleTimerRef.current?.()
       } else if (e.data === 'display-mode:screensaver') {

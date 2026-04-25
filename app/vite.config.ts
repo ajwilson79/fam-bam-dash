@@ -276,6 +276,7 @@ function countdownsPlugin(): Plugin {
         try {
           JSON.parse(body)
           fs.writeFileSync(COUNTDOWNS_FILE, body, 'utf-8')
+          broadcast('countdowns-changed')
           res.writeHead(200, { 'Content-Type': 'application/json' })
           res.end('{"ok":true}')
         } catch {

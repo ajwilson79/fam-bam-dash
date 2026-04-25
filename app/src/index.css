@@ -62,6 +62,8 @@ body {
   scrollbar-width: none;
   border-right: 1px solid var(--color-divider);
   padding: 1.25rem 1rem 1.25rem 1.25rem;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .dash-left::-webkit-scrollbar { display: none; }

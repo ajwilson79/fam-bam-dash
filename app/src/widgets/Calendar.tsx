@@ -125,9 +125,12 @@ export default function Calendar() {
   const [countdowns, setCountdowns] = useState<CountdownEntry[]>([])
   const isCleaningRef = useRef(false)
 
-  // Load persisted countdowns from server on mount
+  // Load persisted countdowns from server on mount and when another device changes them
   useEffect(() => {
     loadCountdowns().then(setCountdowns)
+    function onCountdownsChanged() { loadCountdowns().then(setCountdowns) }
+    window.addEventListener('countdowns-changed', onCountdownsChanged)
+    return () => window.removeEventListener('countdowns-changed', onCountdownsChanged)
   }, [])
 
   useEffect(() => {
