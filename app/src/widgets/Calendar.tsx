@@ -87,7 +87,9 @@ function CountdownSection({ countdowns }: { countdowns: CountdownEntry[] }) {
     return () => clearInterval(id)
   }, [])
 
-  const future = countdowns.filter(cd => new Date(cd.dateTime).getTime() > Date.now())
+  const future = countdowns
+    .filter(cd => new Date(cd.dateTime).getTime() > Date.now())
+    .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
   if (future.length === 0) return null
 
   return (

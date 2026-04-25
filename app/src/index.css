@@ -302,6 +302,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .agenda-day {
@@ -373,10 +375,7 @@ body {
   font-size: clamp(11px, 1.3vw, 14px);
   font-weight: 500;
   color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
+  word-break: break-word;
 }
 
 .countdown-time {
