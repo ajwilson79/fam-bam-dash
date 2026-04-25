@@ -27,8 +27,8 @@ if ! command -v wlopm &>/dev/null; then
     sudo apt-get install -y wlopm
 fi
 
-USER=${SUDO_USER:-pi}
-USER_UID=$(id -u "$USER")
+RUN_USER="${SUDO_USER:-$USER}"
+USER_UID=$(id -u "$RUN_USER")
 
 echo "Creating systemd service at $SERVICE_FILE..."
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF
@@ -41,7 +41,7 @@ Wants=fam-bam-dash.service
 ExecStart=/usr/bin/python3 $SCRIPT_PATH
 Restart=on-failure
 RestartSec=10
-User=$USER
+User=$RUN_USER
 Environment=XDG_RUNTIME_DIR=/run/user/$USER_UID
 
 [Install]
