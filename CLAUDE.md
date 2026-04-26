@@ -138,10 +138,10 @@ Unit tests live in `app/src/__tests__/` covering `gcal`, `todo`, `settings`, `we
 
 Run `npm run build` then `npm run preview` — `vite preview` serves `dist/` and runs the `vite.config.ts` API plugins, so the full API surface is available without a separate server process.
 
-The systemd service is named **`fam-bam-dash`**. Deploy command (pull → install → build → restart):
+The systemd service is named **`fam-bam-dash`**. Deploy command (fetch → reset → install → build → reboot):
 
 ```bash
-ssh fam-bam-pi "cd ~/fam-bam-dash && git pull && cd app && npm install && npm run build && sudo systemctl restart fam-bam-dash"
+ssh fam-bam-pi "cd ~/fam-bam-dash && git fetch && git reset --hard origin/main && cd app && npm install && npm run build && sudo reboot"
 ```
 
 `npm install` is needed whenever `package.json` changes. Safe to include on every deploy.
