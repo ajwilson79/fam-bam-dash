@@ -143,7 +143,7 @@ def main():
     settings: dict = {}
     last_settings_fetch = 0.0
 
-    screen_state = "unknown"   # "on" | "off" | "unknown"
+    screen_state = "on"   # "on" | "off" — assume on after boot/restart
     last_mode_sent = ""        # last display-mode value sent to the app
     last_motion_time = time.time()  # initialise so screen doesn't shut off instantly
     motion_active = False      # tracks edges so we only log on transitions
