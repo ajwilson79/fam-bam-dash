@@ -529,7 +529,13 @@ function keyboardPlugin(): Plugin {
       try {
         const { action } = JSON.parse(body) as { action: string }
         if (action === 'show' && !wvkbdProc) {
-          wvkbdProc = spawn('wvkbd-mobintl', ['-L', '280'], { detached: false })
+          const uid = process.getuid?.() ?? 1000
+          const env = {
+            ...process.env,
+            WAYLAND_DISPLAY: process.env.WAYLAND_DISPLAY ?? 'wayland-1',
+            XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR ?? `/run/user/${uid}`,
+          }
+          wvkbdProc = spawn('wvkbd-mobintl', ['-L', '280'], { detached: false, env })
           wvkbdProc.on('exit', () => { wvkbdProc = null })
         } else if (action === 'hide' && wvkbdProc) {
           wvkbdProc.kill()
