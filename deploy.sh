@@ -14,5 +14,5 @@ npm install
 echo "==> Building..."
 npm run build
 
-echo "==> Restarting service..."
-sudo systemctl restart fam-bam-dash
+echo "==> Rebooting..."
+sudo reboot
