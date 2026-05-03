@@ -1,5 +1,7 @@
 import { adminHeaders } from './admin'
 
+export type WebApp = { name: string; url: string; icon: string }
+
 export type Settings = {
   weather: { zip: string; lat: number; lon: number; refreshIntervalMs: number; units: 'imperial' | 'metric' }
   calendar: { calendarId: string; maxEvents: number; refreshIntervalMs: number }
@@ -13,6 +15,7 @@ export type Settings = {
     nightScreenOffMinutes: number // minutes of no motion before screen off at night
   }
   theme: 'dark' | 'light'
+  webApps: WebApp[]
 }
 
 const KEY = 'fam-bam-settings'
@@ -52,6 +55,7 @@ export function defaultSettings(): Settings {
       nightScreenOffMinutes: 1,
     },
     theme: 'dark',
+    webApps: [],
   }
 }
 
@@ -114,6 +118,10 @@ function validateSettings(raw: unknown): Settings {
       nightScreenOffMinutes: Math.round(num(ms.nightScreenOffMinutes, def.motionSensor.nightScreenOffMinutes, 1, 60)),
     },
     theme: r.theme === 'light' ? 'light' : 'dark',
+    webApps: (Array.isArray(r.webApps) ? r.webApps : [])
+      .filter((a): a is Record<string, unknown> => a !== null && typeof a === 'object')
+      .map(a => ({ name: strOr(a.name, ''), url: strOr(a.url, ''), icon: strOr(a.icon, '🔗') }))
+      .filter(a => a.name.trim() !== '' && a.url.trim() !== ''),
   }
 }
 

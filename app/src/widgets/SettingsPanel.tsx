@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { defaultSettings, loadSettings, setSettings, type Settings } from '../lib/settings'
+import { defaultSettings, loadSettings, setSettings, type Settings, type WebApp } from '../lib/settings'
 import { zipToLatLon } from '../lib/weather'
 import CalendarAdmin from './CalendarAdmin'
 import PhotoUpload from './PhotoUpload'
@@ -7,7 +7,7 @@ import TodoAdmin from './TodoAdmin'
 import AdminPinPrompt from './AdminPinPrompt'
 import { adminHeaders } from '../lib/admin'
 
-type Tab = 'settings' | 'calendars' | 'photos' | 'todos'
+type Tab = 'settings' | 'calendars' | 'photos' | 'todos' | 'apps'
 
 export default function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>('settings')
@@ -16,6 +16,7 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
   const [zipStatus, setZipStatus] = useState<{ ok: boolean; msg: string } | null>(null)
   const [zipBusy, setZipBusy] = useState(false)
   const [quitPromptOpen, setQuitPromptOpen] = useState(false)
+  const [newApp, setNewApp] = useState<WebApp>({ name: '', url: '', icon: '🔗' })
 
   function update(next: Settings) {
     setS(next)
@@ -50,7 +51,7 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
         {/* Header */}
         <div className="flex justify-between items-center px-6 pt-5 pb-0 flex-shrink-0">
           <div className="flex gap-1">
-            {([['settings', '⚙️ Settings'], ['calendars', '📅 Calendars'], ['photos', '🖼️ Photos'], ['todos', '✅ To-Do']] as [Tab, string][]).map(([id, label]) => (
+            {([['settings', '⚙️ Settings'], ['calendars', '📅 Calendars'], ['photos', '🖼️ Photos'], ['todos', '✅ To-Do'], ['apps', '🔗 Apps']] as [Tab, string][]).map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setTab(id)}
@@ -290,6 +291,78 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
           {tab === 'calendars' && <CalendarAdmin />}
           {tab === 'photos' && <PhotoUpload />}
           {tab === 'todos' && <TodoAdmin />}
+          {tab === 'apps' && (
+            <div className="space-y-6">
+              <section className="bg-theme-elevated rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-1">🔗 Web App Shortcuts</h3>
+                <p className="text-xs text-slate-500 mb-4">Each shortcut appears as a tile on the dashboard and opens in a full-screen overlay.</p>
+
+                {/* Existing apps */}
+                {s.webApps.length === 0 ? (
+                  <p className="text-sm text-slate-500 mb-4">No apps added yet.</p>
+                ) : (
+                  <ul className="space-y-2 mb-4">
+                    {s.webApps.map((app, i) => (
+                      <li key={i} className="flex items-center gap-3 bg-theme-card rounded-lg px-3 py-2">
+                        <span className="text-xl w-7 text-center">{app.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{app.name}</div>
+                          <div className="text-xs text-slate-500 truncate">{app.url}</div>
+                        </div>
+                        <button
+                          onClick={() => update({ ...s, webApps: s.webApps.filter((_, j) => j !== i) })}
+                          className="px-2 py-1 rounded bg-red-900/50 hover:bg-red-800/70 text-red-300 text-xs transition-colors touch-manipulation flex-shrink-0"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* Add new app form */}
+                <div className="border-t border-[var(--color-divider)] pt-4 space-y-3">
+                  <h4 className="text-sm font-medium text-slate-300">Add a new app</h4>
+                  <div className="flex gap-2">
+                    <input
+                      value={newApp.icon}
+                      onChange={e => setNewApp(a => ({ ...a, icon: e.target.value }))}
+                      placeholder="🔗"
+                      maxLength={2}
+                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none w-16 text-center text-lg"
+                    />
+                    <input
+                      value={newApp.name}
+                      onChange={e => setNewApp(a => ({ ...a, name: e.target.value }))}
+                      placeholder="Name (e.g. Recipes)"
+                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none flex-1"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      value={newApp.url}
+                      onChange={e => setNewApp(a => ({ ...a, url: e.target.value }))}
+                      placeholder="URL (e.g. http://192.168.1.10:3000/)"
+                      type="url"
+                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none flex-1"
+                    />
+                    <button
+                      onClick={() => {
+                        const trimmed = { name: newApp.name.trim(), url: newApp.url.trim(), icon: newApp.icon.trim() || '🔗' }
+                        if (!trimmed.name || !trimmed.url) return
+                        update({ ...s, webApps: [...s.webApps, trimmed] })
+                        setNewApp({ name: '', url: '', icon: '🔗' })
+                      }}
+                      disabled={!newApp.name.trim() || !newApp.url.trim()}
+                      className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-600 disabled:opacity-40 transition-colors touch-manipulation text-sm font-medium flex-shrink-0"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
         </div>
       </div>
 

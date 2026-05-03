@@ -8,7 +8,7 @@ import VirtualKeyboard from './widgets/VirtualKeyboard'
 import Clock from './widgets/Clock'
 import TodoPanel from './widgets/TodoPanel'
 import { useEffect, useRef, useState } from 'react'
-import { getTabId, loadSettings, setSettings, subscribeSettings, syncSettingsFromServer } from './lib/settings'
+import { getTabId, loadSettings, setSettings, subscribeSettings, syncSettingsFromServer, type WebApp } from './lib/settings'
 import { handleOAuthCallback } from './lib/oauth'
 import { syncCalendars } from './lib/gapi'
 import { syncFromServer } from './lib/todo'
@@ -18,9 +18,10 @@ import { notifyPhotosChanged } from './lib/photos'
 function App() {
   const [openSettings, setOpenSettings] = useState(false)
   const [pinPromptOpen, setPinPromptOpen] = useState(false)
-  const [recipesOpen, setRecipesOpen] = useState(false)
+  const [activeApp, setActiveApp] = useState<WebApp | null>(null)
   const [keyboardVisible, setKeyboardVisible] = useState(false)
   const [theme, setTheme] = useState(() => loadSettings().theme)
+  const [webApps, setWebApps] = useState(() => loadSettings().webApps)
   const [isIdle, setIsIdle] = useState(false)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resetIdleTimerRef = useRef<(() => void) | null>(null)
@@ -65,7 +66,11 @@ function App() {
   }
 
   useEffect(() => {
-    const unsub = subscribeSettings(() => setTheme(loadSettings().theme))
+    const unsub = subscribeSettings(() => {
+      const s = loadSettings()
+      setTheme(s.theme)
+      setWebApps(s.webApps)
+    })
     return () => { unsub() }
   }, [])
 
@@ -92,7 +97,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!recipesOpen) {
+    if (!activeApp) {
       fetch('/api/keyboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -100,7 +105,7 @@ function App() {
       }).catch(() => {})
       setKeyboardVisible(false)
     }
-  }, [recipesOpen])
+  }, [activeApp])
 
   function toggleKeyboard() {
     const next = !keyboardVisible
@@ -193,15 +198,20 @@ function App() {
           <TodoPanel />
         </section>
 
-        <section className="dash-apps">
-          <button
-            className="app-tile"
-            onClick={() => setRecipesOpen(true)}
-          >
-            <span className="app-tile-icon">🍴</span>
-            <span className="app-tile-label">Recipes</span>
-          </button>
-        </section>
+        {webApps.length > 0 && (
+          <section className="dash-apps">
+            {webApps.map((app, i) => (
+              <button
+                key={i}
+                className="app-tile"
+                onClick={() => setActiveApp(app)}
+              >
+                <span className="app-tile-icon">{app.icon}</span>
+                <span className="app-tile-label">{app.name}</span>
+              </button>
+            ))}
+          </section>
+        )}
       </main>
 
       {!isIdle && (
@@ -248,10 +258,10 @@ function App() {
       <SettingsPanel open={openSettings} onClose={() => setOpenSettings(false)} />
       <VirtualKeyboard />
 
-      {recipesOpen && (
+      {activeApp && (
         <div className="app-overlay">
           <div className="app-overlay-bar">
-            <button className="app-overlay-close" onClick={() => setRecipesOpen(false)}>
+            <button className="app-overlay-close" onClick={() => setActiveApp(null)}>
               ← Back to Dashboard
             </button>
             <button className="app-overlay-kbd" onClick={toggleKeyboard} aria-label="Toggle keyboard">
@@ -259,9 +269,9 @@ function App() {
             </button>
           </div>
           <iframe
-            src="http://192.168.121.7:3000/"
+            src={activeApp.url}
             className="app-overlay-frame"
-            title="Recipes"
+            title={activeApp.name}
           />
         </div>
       )}
