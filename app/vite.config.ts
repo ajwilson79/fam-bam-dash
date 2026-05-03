@@ -5,7 +5,7 @@ import * as https from 'node:https'
 import * as http from 'node:http'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { exec, execFile } from 'node:child_process'
+import { exec, execFile, spawn } from 'node:child_process'
 import type { Plugin } from 'vite'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -512,6 +512,41 @@ function photosPlugin(): Plugin {
   }
 }
 
+// ── Keyboard plugin ───────────────────────────────────────────────────────────
+// POST /api/keyboard { action: 'show' | 'hide' }
+// Spawns or kills wvkbd-mobintl so the on-screen keyboard is available inside
+// cross-origin iframes where Chromium kiosk mode blocks the native IME keyboard.
+
+function keyboardPlugin(): Plugin {
+  let wvkbdProc: ReturnType<typeof spawn> | null = null
+
+  type Middleware = (req: http.IncomingMessage, res: http.ServerResponse, next: () => void) => void
+  const middleware: Middleware = (req, res, next) => {
+    if (req.url !== '/api/keyboard' || req.method !== 'POST') { next(); return }
+    let body = ''
+    req.on('data', (chunk: Buffer) => { body += chunk.toString() })
+    req.on('end', () => {
+      try {
+        const { action } = JSON.parse(body) as { action: string }
+        if (action === 'show' && !wvkbdProc) {
+          wvkbdProc = spawn('wvkbd-mobintl', ['-L', '280'], { detached: false })
+          wvkbdProc.on('exit', () => { wvkbdProc = null })
+        } else if (action === 'hide' && wvkbdProc) {
+          wvkbdProc.kill()
+          wvkbdProc = null
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end('{"ok":true}')
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end('{"error":"invalid json"}')
+      }
+    })
+  }
+  const attach = (s: { middlewares: { use: (h: Middleware) => void } }) => { s.middlewares.use(middleware) }
+  return { name: 'keyboard', configureServer: attach, configurePreviewServer: attach }
+}
+
 // ── Display mode plugin ───────────────────────────────────────────────────────
 // Accepts POST /api/display-mode from the motion sensor script and broadcasts
 // the mode change to all connected browser tabs via SSE.
@@ -690,7 +725,7 @@ export default defineConfig(({ mode }) => {
   Object.assign(process.env, env)
 
   return {
-    plugins: [react(), settingsPlugin(), todosPlugin(), countdownsPlugin(), photosPlugin(), displayModePlugin(), icalProxyPlugin(), gcalProxyPlugin(), oauthPlugin()],
+    plugins: [react(), settingsPlugin(), todosPlugin(), countdownsPlugin(), photosPlugin(), keyboardPlugin(), displayModePlugin(), icalProxyPlugin(), gcalProxyPlugin(), oauthPlugin()],
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/__tests__/setup.ts'],

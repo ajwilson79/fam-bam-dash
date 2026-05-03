@@ -90,6 +90,14 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    fetch('/api/keyboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: recipesOpen ? 'show' : 'hide' }),
+    }).catch(() => { /* wvkbd not available on this platform, ignore */ })
+  }, [recipesOpen])
+
   // Restore settings and todos from server on startup (survives browser localStorage wipes)
   useEffect(() => { syncSettingsFromServer() }, [])
   useEffect(() => { syncFromServer() }, [])
