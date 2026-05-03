@@ -18,6 +18,7 @@ import { notifyPhotosChanged } from './lib/photos'
 function App() {
   const [openSettings, setOpenSettings] = useState(false)
   const [pinPromptOpen, setPinPromptOpen] = useState(false)
+  const [recipesOpen, setRecipesOpen] = useState(false)
   const [theme, setTheme] = useState(() => loadSettings().theme)
   const [isIdle, setIsIdle] = useState(false)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -171,15 +172,13 @@ function App() {
         </section>
 
         <section className="dash-apps">
-          <a
-            href="http://192.168.121.7:3000/"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
             className="app-tile"
+            onClick={() => setRecipesOpen(true)}
           >
             <span className="app-tile-icon">🍴</span>
             <span className="app-tile-label">Recipes</span>
-          </a>
+          </button>
         </section>
       </main>
 
@@ -226,6 +225,19 @@ function App() {
 
       <SettingsPanel open={openSettings} onClose={() => setOpenSettings(false)} />
       <VirtualKeyboard />
+
+      {recipesOpen && (
+        <div className="app-overlay">
+          <button className="app-overlay-close" onClick={() => setRecipesOpen(false)}>
+            ← Back to Dashboard
+          </button>
+          <iframe
+            src="http://192.168.121.7:3000/"
+            className="app-overlay-frame"
+            title="Recipes"
+          />
+        </div>
+      )}
     </div>
   )
 }
