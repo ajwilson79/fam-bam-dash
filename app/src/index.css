@@ -186,13 +186,19 @@ body {
   background: #000;
 }
 
-.app-overlay-close {
+.app-overlay-bar {
   flex-shrink: 0;
-  width: 100%;
-  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: stretch;
   background: var(--color-elevated);
-  border: none;
   border-bottom: 1px solid var(--color-divider);
+}
+
+.app-overlay-close {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: 1rem;
@@ -202,7 +208,22 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-.app-overlay-close:active {
+.app-overlay-kbd {
+  padding: 1rem 1.25rem;
+  background: none;
+  border: none;
+  border-left: 1px solid var(--color-divider);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-overlay-close:active,
+.app-overlay-kbd:active {
   opacity: 0.7;
 }
 

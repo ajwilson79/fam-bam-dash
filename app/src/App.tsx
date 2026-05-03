@@ -19,6 +19,7 @@ function App() {
   const [openSettings, setOpenSettings] = useState(false)
   const [pinPromptOpen, setPinPromptOpen] = useState(false)
   const [recipesOpen, setRecipesOpen] = useState(false)
+  const [keyboardVisible, setKeyboardVisible] = useState(false)
   const [theme, setTheme] = useState(() => loadSettings().theme)
   const [isIdle, setIsIdle] = useState(false)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -91,12 +92,25 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (!recipesOpen) {
+      fetch('/api/keyboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'hide' }),
+      }).catch(() => {})
+      setKeyboardVisible(false)
+    }
+  }, [recipesOpen])
+
+  function toggleKeyboard() {
+    const next = !keyboardVisible
     fetch('/api/keyboard', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: recipesOpen ? 'show' : 'hide' }),
-    }).catch(() => { /* wvkbd not available on this platform, ignore */ })
-  }, [recipesOpen])
+      body: JSON.stringify({ action: next ? 'show' : 'hide' }),
+    }).catch(() => {})
+    setKeyboardVisible(next)
+  }
 
   // Restore settings and todos from server on startup (survives browser localStorage wipes)
   useEffect(() => { syncSettingsFromServer() }, [])
@@ -236,9 +250,14 @@ function App() {
 
       {recipesOpen && (
         <div className="app-overlay">
-          <button className="app-overlay-close" onClick={() => setRecipesOpen(false)}>
-            ← Back to Dashboard
-          </button>
+          <div className="app-overlay-bar">
+            <button className="app-overlay-close" onClick={() => setRecipesOpen(false)}>
+              ← Back to Dashboard
+            </button>
+            <button className="app-overlay-kbd" onClick={toggleKeyboard} aria-label="Toggle keyboard">
+              {keyboardVisible ? '⌨ Hide Keyboard' : '⌨ Keyboard'}
+            </button>
+          </div>
           <iframe
             src="http://192.168.121.7:3000/"
             className="app-overlay-frame"
