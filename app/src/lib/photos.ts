@@ -45,11 +45,29 @@ export function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
+// Minimal types for the Google Identity Services script loaded via <script> tag
+interface GisTokenResponse {
+  access_token?: string
+  expires_in?: number | string
+}
+interface GisTokenClient {
+  requestAccessToken: (opts: { prompt: string }) => void
+}
+interface GisTokenClientConfig {
+  client_id: string
+  scope: string
+  callback: (resp: GisTokenResponse) => void
+  error_callback: (err: unknown) => void
+}
+interface GisWindow extends Window {
+  google?: { accounts?: { oauth2?: { initTokenClient: (c: GisTokenClientConfig) => GisTokenClient } } }
+}
+
 const GIS_SRC = 'https://accounts.google.com/gsi/client'
 
 export function loadGisScript(): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
+    if (typeof window !== 'undefined' && (window as GisWindow).google?.accounts?.oauth2) {
       resolve()
       return
     }
@@ -85,10 +103,12 @@ export async function getGooglePhotosToken(
   await loadGisScript()
   return new Promise<string>((resolve, reject) => {
     try {
-      const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+      const oauth2 = (window as GisWindow).google?.accounts?.oauth2
+      if (!oauth2) { reject(new Error('GIS not loaded')); return }
+      const tokenClient = oauth2.initTokenClient({
         client_id: clientId,
         scope,
-        callback: (resp: any) => {
+        callback: (resp: GisTokenResponse) => {
           if (resp && resp.access_token) {
             const expiresIn = Number(resp.expires_in ?? 3600)
             tokenCache = { token: resp.access_token, expiresAt: Date.now() + expiresIn * 1000 }
@@ -97,7 +117,7 @@ export async function getGooglePhotosToken(
             reject(new Error('Failed to acquire access token'))
           }
         },
-        error_callback: (err: any) => reject(err),
+        error_callback: (err: unknown) => reject(err),
       })
       // Silent refresh if user already consented; full consent prompt on first auth
       tokenClient.requestAccessToken({ prompt: tokenCache ? '' : 'consent' })
@@ -119,7 +139,7 @@ export async function fetchGooglePhotosAlbum(token: string, albumId: string, max
   let pageToken: string | undefined
   const out: PhotoItem[] = []
   do {
-    const body: any = { albumId, pageSize: Math.min(100, maxItems - out.length) }
+    const body: Record<string, unknown> = { albumId, pageSize: Math.min(100, maxItems - out.length) }
     if (pageToken) body.pageToken = pageToken
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -133,8 +153,8 @@ export async function fetchGooglePhotosAlbum(token: string, albumId: string, max
       const text = await res.text()
       throw new Error(`Google Photos error: ${res.status} ${text}`)
     }
-    const json = await res.json()
-    const got: GoogleMediaItem[] = (json.mediaItems || []).filter((it: any) => typeof it.baseUrl === 'string')
+    const json = await res.json() as { mediaItems?: GoogleMediaItem[]; nextPageToken?: string }
+    const got = (json.mediaItems ?? []).filter(it => typeof it.baseUrl === 'string')
     for (const it of got) {
       if (!it.mimeType || !it.mimeType.startsWith('image/')) continue
       out.push({ id: `google-${it.id}`, src: `${it.baseUrl}=w1920-h1080`, source: 'google' })

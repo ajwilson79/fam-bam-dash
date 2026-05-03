@@ -147,7 +147,7 @@ export async function syncSettingsFromServer(): Promise<void> {
     const local = localStorage.getItem(KEY)
     if (local !== validatedStr) {
       localStorage.setItem(KEY, validatedStr)
-      listeners.forEach(fn => { try { fn() } catch {} })
+      listeners.forEach(fn => { try { fn() } catch { /* ignore listener errors */ } })
     }
   } catch { /* server unavailable — local-only is fine */ }
 }

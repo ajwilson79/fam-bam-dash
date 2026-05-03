@@ -21,7 +21,7 @@ export function subscribeTodo(fn: () => void): () => void {
   return () => { listeners.delete(fn) }
 }
 function broadcast() {
-  listeners.forEach(fn => { try { fn() } catch {} })
+  listeners.forEach(fn => { try { fn() } catch { /* ignore listener errors */ } })
 }
 
 // ── storage ───────────────────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ export function loadState(): TodoState {
 
 // Persist to localStorage (instant) AND to the server file (durable).
 export function saveState(state: TodoState) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch { /* localStorage unavailable */ }
   fetch('/api/todos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Tab-Id': getTabId() },
@@ -83,7 +83,7 @@ export async function syncFromServer(): Promise<void> {
       localStorage.setItem(STORAGE_KEY, raw)
       broadcast()
     }
-  } catch {}
+  } catch { /* server unavailable — local state is fine */ }
 }
 
 // ── auto-remove logic ─────────────────────────────────────────────────────────
