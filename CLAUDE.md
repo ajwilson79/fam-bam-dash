@@ -62,7 +62,7 @@ scripts/motion_sensor.py (optional, Raspberry Pi only)
 No external state library. Two custom pub/sub modules handle all shared state:
 
 - **`lib/settings.ts`** — `Settings` type (weather, calendar, slideshow, todo, motionSensor, theme, webApps) and `WebApp` type (`{ name, url, icon }`), `subscribeSettings()` / `setSettings()`. Persists to `localStorage` + `/api/settings` (server backup). Restored from server on startup via `syncSettingsFromServer()`. `SettingsPanel` also calls `syncSettingsFromServer()` each time it opens to prevent a remote browser from overwriting data saved by another device.
-- **`lib/todo.ts`** — `TodoState` type, `subscribeTodo()` / `saveState()`. Same dual-persistence pattern. Checked items auto-remove after a configurable delay via `autoRemoveExpired()`.
+- **`lib/todo.ts`** — `TodoState` type, `subscribeTodo()` / `saveState()`. Same dual-persistence pattern. Checked items auto-remove after a configurable delay via `autoRemoveExpired()`. `editItem(state, listId, itemId, text)` updates item text in place (pure, returns new state).
 
 Multi-tab sync: All tabs connect to `/api/sse`. The SSE stream carries four event types:
 - `reload:<tabId>` — broadcast when settings/todos are saved; tabs with a different `tabId` reload

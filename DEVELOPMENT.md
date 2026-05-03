@@ -120,7 +120,11 @@ The `sseClients` set and `broadcast()` function live at module scope in `vite.co
 - On startup, `syncFromServer()` restores from `data/todos.json` if localStorage is empty
 - Pub/sub: `subscribeTodo(fn)` / `saveState(s)` – keeps dashboard and admin in sync
 - `toggleItem()` sets `checkedAt` when checked; `autoRemoveExpired(state, ms)` removes items older than the configured delay (default 10 min, configurable in Settings)
+- `editItem(state, listId, itemId, text)` updates item text and `updatedAt`; returns new state without mutation
 - `reorderLists()` is pure (no mutation)
+
+### Google Photos (`lib/photos.ts`)
+- `GisWindow`, `GisTokenClient`, `GisTokenClientConfig`, `GisTokenResponse` — local interfaces that type the Google Identity Services script injected at runtime via `<script src="https://accounts.google.com/gsi/client">`. Avoids `any` casts when calling `window.google.accounts.oauth2.initTokenClient`.
 
 ### OAuth Tokens (`lib/oauth.ts`)
 - Stored in `localStorage` under `fam-bam-gcal-accounts`

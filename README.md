@@ -14,7 +14,7 @@ Fam Bam Dash is a customizable, touch-friendly smart home dashboard designed to 
 - **Photo Slideshow** – Upload photos directly from the browser (drag-and-drop); displays full images with a blurred backdrop fill and Ken Burns zoom/pan animation
 - **Idle Screensaver / Picture Frame Mode** – After a configurable idle timeout (default 5 minutes), the display switches to a fullscreen photo slideshow; any touch, click, or keypress returns to the dashboard
 - **Motion Sensor Integration (optional)** – A PIR sensor on GPIO pin 17 wakes the screen on motion; configurable day/night behaviour (dashboard vs picture frame) and per-period screen-off timeouts, all adjustable from the browser
-- **Interactive To-Do Lists** – Per-person lists with checkboxes; checked items auto-remove after a configurable delay (default 10 minutes)
+- **Interactive To-Do Lists** – Per-person lists with checkboxes; checked items auto-remove after a configurable delay (default 10 minutes); items can be edited in-place from the To-Do admin tab
 - **Countdown Timers** – Tap the ⏱ button next to any future calendar event to add a countdown; cards appear at the top of the schedule showing time remaining; persist across restarts and sync instantly to all connected devices
 - **Web App Shortcuts** – Add tiles for any local-network web app (recipe manager, home automation, media server, etc.); each tile opens in a full-screen overlay with a keyboard toggle; configured from the 🔗 Apps tab in Settings; persisted in `app/data/settings.json`
 - **Exit Kiosk** – A PIN-gated "Exit Kiosk" button in the ⚙️ Settings tab closes Chromium so you can access the Pi desktop without a hard reboot
@@ -44,7 +44,7 @@ Click the gear icon (bottom-right) to open Settings. The panel has four tabs:
 | ⚙️ Settings | Weather ZIP code, units (°F/mph or °C/km/h), refresh interval, slideshow interval & shuffle, screensaver idle timeout, motion sensor night hours & screen-off timeouts, to-do auto-remove delay, dark/light theme, exit kiosk (PIN gated) |
 | 📅 Calendars | Connect Google accounts via OAuth, sync calendar list, toggle individual calendars on/off |
 | 🖼️ Photos | Drag-and-drop photo upload; delete uploaded photos |
-| ✅ To-Do | Add/rename/delete lists and items; drag to reorder lists |
+| ✅ To-Do | Add/rename/delete lists; add, edit, and delete items; drag to reorder lists |
 | 🔗 Apps | Add, edit, and remove web app shortcut tiles; each tile opens the URL in a full-screen iframe overlay |
 
 Settings are persisted to `localStorage` and synced to `app/data/settings.json` on the server (survives browser clears). To-do state is stored under `fam-bam-todo` in `localStorage` and synced to `app/data/todos.json`.

@@ -95,6 +95,9 @@ Check an item on the dashboard to mark it done. It stays visible for the configu
 ### How long until checked items disappear?
 10 minutes by default. Configurable in Settings → ⚙️ Settings → To-Do → "Auto-remove checked items after (minutes)".
 
+### Can I edit an existing to-do item?
+Yes. In Settings → ✅ To-Do, each item has a ✎ pencil button next to the × delete button. Clicking it opens an inline input pre-filled with the current text. Press Enter or click **Save** to commit, or press Escape or click **Cancel** to discard.
+
 ### Can I reorder the lists?
 Yes. On the dashboard, drag the **⠿** handle on a list column to move it. You can also reorder them in Settings → ✅ To-Do using the same drag handle.
 
