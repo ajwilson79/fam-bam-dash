@@ -186,6 +186,29 @@ Edit `app/.env.local` on the Pi and change `FAM_BAM_ADMIN_PIN` to a new value. R
 ### Does the PIN encrypt anything?
 No. It's a shared-secret check on admin API endpoints — fine for protecting a household dashboard against accidental taps and casual LAN tampering, not a defence against a determined attacker on your network. For stronger isolation, put the app behind Tailscale or bind it to localhost.
 
+## Web App Shortcuts
+
+### What are web app shortcuts?
+Tiles that appear at the bottom of the dashboard and open any local-network web app in a full-screen overlay — recipe managers, home automation dashboards, media servers, etc. Each tile has a name, URL, and emoji icon you pick from a grid.
+
+### How do I add a web app?
+Settings (⚙️ bottom-right) → 🔗 Apps tab → choose an emoji icon, enter a name and URL → click **Add**. The tile appears on the dashboard immediately.
+
+### How do I edit or remove a tile?
+In Settings → 🔗 Apps, each existing app has **Edit** and **Remove** buttons. Edit opens the fields in-place so you can fix a typo without starting from scratch.
+
+### Can I add Google, news sites, or other public websites?
+No. Public websites set `X-Frame-Options: DENY` or a `Content-Security-Policy` that blocks them from loading inside iframes. You'll see a "connection refused" or blank frame. Only apps running on your local network (a Raspberry Pi, NAS, home server, etc.) will work reliably.
+
+### Does the on-screen keyboard work inside the overlay?
+Yes. The ⌨ Keyboard button in the overlay toolbar toggles the on-screen keyboard. This is useful on the Pi touch display when the app needs text input.
+
+### Where are the shortcuts stored?
+In `app/data/settings.json` under the `webApps` key, alongside all other settings. They survive server restarts and browser cache clears like the rest of your settings.
+
+### I added an app on my PC and it disappeared from the Pi
+This was a bug that has been fixed. The Settings panel now always fetches the current app list from the server when it opens, so a remote browser can never overwrite shortcuts added by another device.
+
 ## Motion Sensor
 
 ### Do I need a motion sensor?

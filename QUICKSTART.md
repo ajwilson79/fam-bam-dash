@@ -26,6 +26,7 @@ Once the app is open:
 3. Go to the **📅 Calendars** tab to connect a Google account (requires OAuth setup – see below)
 4. Go to the **🖼️ Photos** tab to upload family photos directly from the browser
 5. Go to the **✅ To-Do** tab to create lists for each family member
+6. Go to the **🔗 Apps** tab to add shortcut tiles for local-network web apps (recipe managers, home automation dashboards, media servers, etc.) — pick an emoji icon, give it a name, and paste the URL
 
 ## Environment Variables (Optional)
 
@@ -106,6 +107,7 @@ npm run preview
 | Screensaver never activates | Check Settings → ⚙️ Settings → 💤 Screensaver — make sure it's enabled |
 | Settings reset on reload | Settings are also server-persisted; make sure the server is running |
 | OAuth redirect fails | Check the redirect URI in Google Cloud Console matches `http://localhost:12000` exactly |
+| App tile says "connection refused" | Only local-network URLs work — public sites (Google, news sites) block iframe embedding via `X-Frame-Options` |
 | Boot splash image rotated wrong | `assets/splash-boot.png` must be pre-rotated — Plymouth runs before OS rotation is applied |
 
 See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more detail.

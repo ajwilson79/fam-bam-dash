@@ -61,7 +61,7 @@ scripts/motion_sensor.py (optional, Raspberry Pi only)
 
 No external state library. Two custom pub/sub modules handle all shared state:
 
-- **`lib/settings.ts`** — `Settings` type (weather, calendar, slideshow, todo, motionSensor, theme), `subscribeSettings()` / `setSettings()`. Persists to `localStorage` + `/api/settings` (server backup). Restored from server on startup via `syncSettingsFromServer()`.
+- **`lib/settings.ts`** — `Settings` type (weather, calendar, slideshow, todo, motionSensor, theme, webApps) and `WebApp` type (`{ name, url, icon }`), `subscribeSettings()` / `setSettings()`. Persists to `localStorage` + `/api/settings` (server backup). Restored from server on startup via `syncSettingsFromServer()`. `SettingsPanel` also calls `syncSettingsFromServer()` each time it opens to prevent a remote browser from overwriting data saved by another device.
 - **`lib/todo.ts`** — `TodoState` type, `subscribeTodo()` / `saveState()`. Same dual-persistence pattern. Checked items auto-remove after a configurable delay via `autoRemoveExpired()`.
 
 Multi-tab sync: All tabs connect to `/api/sse`. The SSE stream carries four event types:
@@ -105,6 +105,7 @@ app/src/
 - **Preview mode static files** — `vite preview` only serves `dist/` (a build snapshot), so the `photosPlugin` registers a middleware in `configurePreviewServer` that serves newly uploaded files from `public/uploads/` directly at `/uploads/*`. Dev mode is unaffected (Vite serves `public/` natively).
 - **Countdown timers** — `widgets/Calendar.tsx` shows a ⏱ toggle on each future event. Active countdowns persist to `data/countdowns.json` via `/api/countdowns` (no PIN required — dashboard-facing state, not admin-gated). Changes broadcast `countdowns-changed` via SSE so all devices update instantly. Past-event countdowns auto-remove on each calendar refresh. The calendar fetches 90 days ahead so countdowns can be set on events beyond the default schedule window.
 - **Touch-drag scroll (Pi/Wayland)** — Pi touch screens on Wayland report gestures as pointer events, not Web Touch Events, so `touch-action: pan-y` has no effect. `App.tsx` attaches a `pointerdown`/`pointermove` handler to `.dash-left` that manually updates `scrollTop`. An 8 px movement threshold distinguishes taps (pointer not captured; click fires normally) from scroll drags (pointer captured; subsequent clicks suppressed).
+- **Web app shortcuts** — `settings.webApps: WebApp[]` drives the `.dash-apps` tile strip (hidden when empty). `App.tsx` holds `activeApp: WebApp | null`; clicking a tile sets it, which renders the full-screen iframe overlay. The overlay is shared across all apps; `activeApp` going to `null` hides the keyboard via `/api/keyboard`. Public sites are blocked by `X-Frame-Options`/CSP — only local-network URLs work. `SettingsPanel` → 🔗 Apps tab handles add/inline-edit/remove with an emoji picker grid.
 
 ## Environment Variables
 

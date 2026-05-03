@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Web app shortcuts** – Add tiles for any local-network web app from Settings → 🔗 Apps. Each tile (name, URL, emoji icon) opens in a full-screen iframe overlay with a keyboard toggle button. Apps can be added, edited in-place, and removed. The tile bar hides automatically when no apps are configured. The Settings panel syncs from the server on open so a remote browser never overwrites apps added by another device. Stored in `app/data/settings.json` under `webApps`.
 - **Photo thumbnails in admin panel** – Settings → 🖼️ Photos now loads fast 400×300 JPEG previews (`/api/photos/thumb`) instead of full-resolution images. Thumbnails are generated on first request using `sharp` and cached in `public/uploads/.thumbs/`. Deleting a photo also removes its cached thumbnail.
 - **Idle screensaver / picture frame mode** – after a configurable timeout (default 5 min) with no user interaction, the display switches to a fullscreen photo slideshow with Ken Burns animation; any mouse move, click, touch, or keypress returns to the dashboard. Configured in Settings → ⚙️ Settings → 💤 Screensaver
 - **Ken Burns effect** – photos in the slideshow have a gentle zoom/pan animation with four alternating variants
@@ -20,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Weather units toggle (°F/mph ↔ °C/km/h) in Settings → ⚙️ Settings
 
 ### Fixed
+- **`deploy.sh` path failure after `cd app`** – `$(dirname "$0")` evaluated relative to the changed working directory, causing the labwc autostart copy to fail and aborting the script before the service restart/reboot. The script now captures `REPO_DIR` at the top using an absolute path.
 - **Remote browser todos/settings always in sync** – `syncFromServer()` and `syncSettingsFromServer()` now always apply the server state on startup instead of only when localStorage was empty. Fixes stale data on remote browsers (e.g. PC accessing the Pi dashboard) after items are added or removed on the Pi.
 - **Uploaded photos visible immediately in preview mode** – `vite preview` only serves `dist/` (a build snapshot), so new uploads were unreachable until a rebuild. A middleware now serves `public/uploads/` directly in preview mode.
 - Settings panel Close button is now clearly visible in dark mode (explicit text color + border)

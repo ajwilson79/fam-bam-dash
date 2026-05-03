@@ -16,6 +16,7 @@ Fam Bam Dash is a customizable, touch-friendly smart home dashboard designed to 
 - **Motion Sensor Integration (optional)** – A PIR sensor on GPIO pin 17 wakes the screen on motion; configurable day/night behaviour (dashboard vs picture frame) and per-period screen-off timeouts, all adjustable from the browser
 - **Interactive To-Do Lists** – Per-person lists with checkboxes; checked items auto-remove after a configurable delay (default 10 minutes)
 - **Countdown Timers** – Tap the ⏱ button next to any future calendar event to add a countdown; cards appear at the top of the schedule showing time remaining; persist across restarts and sync instantly to all connected devices
+- **Web App Shortcuts** – Add tiles for any local-network web app (recipe manager, home automation, media server, etc.); each tile opens in a full-screen overlay with a keyboard toggle; configured from the 🔗 Apps tab in Settings; persisted in `app/data/settings.json`
 - **Exit Kiosk** – A PIN-gated "Exit Kiosk" button in the ⚙️ Settings tab closes Chromium so you can access the Pi desktop without a hard reboot
 - **Live Multi-Screen Sync** – Any change (settings, todos, or countdowns) made on one device instantly reloads all other open screens via Server-Sent Events; the screen that made the change is never disrupted
 - **Dark / Light Mode** – Toggle from the floating button on the dashboard
@@ -44,6 +45,7 @@ Click the gear icon (bottom-right) to open Settings. The panel has four tabs:
 | 📅 Calendars | Connect Google accounts via OAuth, sync calendar list, toggle individual calendars on/off |
 | 🖼️ Photos | Drag-and-drop photo upload; delete uploaded photos |
 | ✅ To-Do | Add/rename/delete lists and items; drag to reorder lists |
+| 🔗 Apps | Add, edit, and remove web app shortcut tiles; each tile opens the URL in a full-screen iframe overlay |
 
 Settings are persisted to `localStorage` and synced to `app/data/settings.json` on the server (survives browser clears). To-do state is stored under `fam-bam-todo` in `localStorage` and synced to `app/data/todos.json`.
 

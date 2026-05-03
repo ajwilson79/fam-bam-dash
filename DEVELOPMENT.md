@@ -45,7 +45,7 @@ fam-bam-dash/
 │   │   │   ├── Calendar.tsx            # Upcoming calendar events, color-coded by calendar
 │   │   │   ├── TodoPanel.tsx           # Dashboard to-do columns
 │   │   │   ├── PhotoSlideshow.tsx      # Full-image slideshow with blur backdrop
-│   │   │   ├── SettingsPanel.tsx       # 4-tab settings modal
+│   │   │   ├── SettingsPanel.tsx       # 5-tab settings modal (Settings, Calendars, Photos, To-Do, Apps)
 │   │   │   ├── CalendarAdmin.tsx       # OAuth connect + calendar toggle UI
 │   │   │   ├── PhotoUpload.tsx         # Drag-and-drop photo upload UI
 │   │   │   └── TodoAdmin.tsx           # Add/rename/delete lists and items
@@ -106,11 +106,12 @@ The `sseClients` set and `broadcast()` function live at module scope in `vite.co
 ## State Management
 
 ### Settings (`lib/settings.ts`)
-- Type: `Settings` – weather, calendar, slideshow, todo, motionSensor, theme
+- Types: `Settings` – weather, calendar, slideshow, todo, motionSensor, theme, webApps; `WebApp` – `{ name, url, icon }`
 - Stored in `localStorage` under `fam-bam-settings`; also synced to `/api/settings` on every save
-- On startup, `syncSettingsFromServer()` restores from `data/settings.json` if localStorage is empty
+- On startup, `syncSettingsFromServer()` restores from `data/settings.json` — server is always authoritative
+- `SettingsPanel` also calls `syncSettingsFromServer()` when it opens so a remote browser never overwrites data from another device
 - Pub/sub: `subscribeSettings(fn)` / `setSettings(s)` – all widgets re-render on change
-- Validation: `validateSettings()` clamps values to safe ranges on load
+- Validation: `validateSettings()` clamps values to safe ranges and strips malformed `webApps` entries on load
 
 ### Todo (`lib/todo.ts`)
 - Type: `TodoState` – `{ lists: TodoList[] }`, each list has `{ id, name, items[] }`
