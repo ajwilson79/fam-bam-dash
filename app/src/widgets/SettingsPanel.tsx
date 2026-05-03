@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { defaultSettings, loadSettings, setSettings, type Settings, type WebApp } from '../lib/settings'
+import { useEffect, useState } from 'react'
+import { defaultSettings, loadSettings, setSettings, syncSettingsFromServer, type Settings, type WebApp } from '../lib/settings'
 import { zipToLatLon } from '../lib/weather'
 import CalendarAdmin from './CalendarAdmin'
 import PhotoUpload from './PhotoUpload'
@@ -17,6 +17,14 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
   const [zipBusy, setZipBusy] = useState(false)
   const [quitPromptOpen, setQuitPromptOpen] = useState(false)
   const [newApp, setNewApp] = useState<WebApp>({ name: '', url: '', icon: '🔗' })
+
+  // Re-read from server each time the panel opens so a remote browser never
+  // overwrites apps that were saved by another device.
+  useEffect(() => {
+    if (!open) return
+    setS(loadSettings())
+    syncSettingsFromServer().then(() => setS(loadSettings()))
+  }, [open])
 
   function update(next: Settings) {
     setS(next)
@@ -323,41 +331,54 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
                 {/* Add new app form */}
                 <div className="border-t border-[var(--color-divider)] pt-4 space-y-3">
                   <h4 className="text-sm font-medium text-slate-300">Add a new app</h4>
-                  <div className="flex gap-2">
-                    <input
-                      value={newApp.icon}
-                      onChange={e => setNewApp(a => ({ ...a, icon: e.target.value }))}
-                      placeholder="🔗"
-                      maxLength={2}
-                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none w-16 text-center text-lg"
-                    />
-                    <input
-                      value={newApp.name}
-                      onChange={e => setNewApp(a => ({ ...a, name: e.target.value }))}
-                      placeholder="Name (e.g. Recipes)"
-                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none flex-1"
-                    />
+
+                  {/* Emoji picker */}
+                  <div>
+                    <span className="text-xs text-slate-500 block mb-1.5">Icon</span>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {['🔗','🌐','📰','📺','🎵','🎮','📷','🏠','🛒','📊','🗒️','💬','🔍','📚','🍴','🍕','🎬','🏋️','💊','🌡️','🚗','✈️','💰','🗺️','📡','🖥️','📱','⚙️'].map(e => (
+                        <button
+                          key={e}
+                          type="button"
+                          onClick={() => setNewApp(a => ({ ...a, icon: e }))}
+                          className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-colors touch-manipulation ${newApp.icon === e ? 'bg-sky-700 ring-2 ring-sky-400' : 'bg-slate-800 hover:bg-slate-700'}`}
+                        >
+                          {e}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      value={newApp.url}
-                      onChange={e => setNewApp(a => ({ ...a, url: e.target.value }))}
-                      placeholder="URL (e.g. http://192.168.1.10:3000/)"
-                      type="url"
-                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none flex-1"
-                    />
-                    <button
-                      onClick={() => {
-                        const trimmed = { name: newApp.name.trim(), url: newApp.url.trim(), icon: newApp.icon.trim() || '🔗' }
-                        if (!trimmed.name || !trimmed.url) return
-                        update({ ...s, webApps: [...s.webApps, trimmed] })
-                        setNewApp({ name: '', url: '', icon: '🔗' })
-                      }}
-                      disabled={!newApp.name.trim() || !newApp.url.trim()}
-                      className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-600 disabled:opacity-40 transition-colors touch-manipulation text-sm font-medium flex-shrink-0"
-                    >
-                      Add
-                    </button>
+
+                  <input
+                    value={newApp.name}
+                    onChange={e => setNewApp(a => ({ ...a, name: e.target.value }))}
+                    placeholder="Name (e.g. Recipes)"
+                    className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none w-full"
+                  />
+
+                  <div>
+                    <div className="flex gap-2">
+                      <input
+                        value={newApp.url}
+                        onChange={e => setNewApp(a => ({ ...a, url: e.target.value }))}
+                        placeholder="URL (e.g. http://192.168.1.10:3000/)"
+                        type="url"
+                        className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none flex-1"
+                      />
+                      <button
+                        onClick={() => {
+                          const trimmed = { name: newApp.name.trim(), url: newApp.url.trim(), icon: newApp.icon || '🔗' }
+                          if (!trimmed.name || !trimmed.url) return
+                          update({ ...s, webApps: [...s.webApps, trimmed] })
+                          setNewApp({ name: '', url: '', icon: '🔗' })
+                        }}
+                        disabled={!newApp.name.trim() || !newApp.url.trim()}
+                        className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-600 disabled:opacity-40 transition-colors touch-manipulation text-sm font-medium flex-shrink-0"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1.5">⚠ Only local network apps work — public sites like Google block embedding in iframes.</p>
                   </div>
                 </div>
               </section>
