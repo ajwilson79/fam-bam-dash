@@ -160,6 +160,18 @@ export function removeItem(state: TodoState, listId: string, itemId: string): To
   return { ...state, lists: state.lists.map(l => l.id === listId ? { ...l, items: l.items.filter(it => it.id !== itemId) } : l) }
 }
 
+export function editItem(state: TodoState, listId: string, itemId: string, text: string): TodoState {
+  const trimmed = text.trim()
+  if (!trimmed) return state
+  return {
+    ...state,
+    lists: state.lists.map(l => l.id === listId ? {
+      ...l,
+      items: l.items.map(it => it.id === itemId ? { ...it, text: trimmed, updatedAt: now() } : it),
+    } : l),
+  }
+}
+
 export function reorderLists(state: TodoState, fromIdx: number, toIdx: number): TodoState {
   if (fromIdx === toIdx) return state
   const lists = [...state.lists]

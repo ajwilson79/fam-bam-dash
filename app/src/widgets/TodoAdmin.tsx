@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  addItem, addList, loadState, removeItem, removeList,
+  addItem, addList, editItem, loadState, removeItem, removeList,
   renameList, reorderLists, saveState, subscribeTodo, type TodoState,
 } from '../lib/todo'
 
@@ -10,6 +10,8 @@ export default function TodoAdmin() {
   const [newItemText, setNewItemText] = useState<Record<string, string>>({})
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameText, setRenameText] = useState('')
+  const [editingItem, setEditingItem] = useState<{ listId: string; itemId: string } | null>(null)
+  const [editItemText, setEditItemText] = useState('')
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
 
   const dragIdx = useRef<number | null>(null)
@@ -195,13 +197,47 @@ export default function TodoAdmin() {
             <ul className="todo-admin-items">
               {list.items.map(item => (
                 <li key={item.id} className={`todo-admin-item ${item.done ? 'is-done' : ''}`}>
-                  <span className="todo-admin-item-text">{item.text}</span>
-                  {item.done && <span className="todo-admin-done-badge">checked</span>}
-                  <button
-                    className="todo-admin-item-delete"
-                    onClick={() => commit(removeItem(state, list.id, item.id))}
-                    title="Remove item"
-                  >×</button>
+                  {editingItem?.itemId === item.id ? (
+                    <div className="todo-admin-rename-row" style={{ flex: 1 }}>
+                      <input
+                        value={editItemText}
+                        onChange={e => setEditItemText(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && editItemText.trim()) {
+                            commit(editItem(state, list.id, item.id, editItemText))
+                            setEditingItem(null)
+                          }
+                          if (e.key === 'Escape') setEditingItem(null)
+                        }}
+                        autoFocus
+                        className="todo-admin-input"
+                      />
+                      <button
+                        className="todo-admin-btn small"
+                        onClick={() => {
+                          if (editItemText.trim()) commit(editItem(state, list.id, item.id, editItemText))
+                          setEditingItem(null)
+                        }}
+                      >Save</button>
+                      <button className="todo-admin-btn small muted" onClick={() => setEditingItem(null)}>Cancel</button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="todo-admin-item-text">{item.text}</span>
+                      {item.done && <span className="todo-admin-done-badge">checked</span>}
+                      <button
+                        className="todo-admin-item-delete"
+                        style={{ marginLeft: 'auto', marginRight: '0.25rem', fontSize: '0.75rem', opacity: 0.6 }}
+                        onClick={() => { setEditItemText(item.text); setEditingItem({ listId: list.id, itemId: item.id }) }}
+                        title="Edit item"
+                      >✎</button>
+                      <button
+                        className="todo-admin-item-delete"
+                        onClick={() => commit(removeItem(state, list.id, item.id))}
+                        title="Remove item"
+                      >×</button>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
