@@ -17,6 +17,10 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
   const [zipBusy, setZipBusy] = useState(false)
   const [quitPromptOpen, setQuitPromptOpen] = useState(false)
   const [newApp, setNewApp] = useState<WebApp>({ name: '', url: '', icon: '🔗' })
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editApp, setEditApp] = useState<WebApp>({ name: '', url: '', icon: '🔗' })
+
+  const APP_EMOJIS = ['🔗','🌐','📰','📺','🎵','🎮','📷','🏠','🛒','📊','🗒️','💬','🔍','📚','🍴','🍕','🎬','🏋️','💊','🌡️','🚗','✈️','💰','🗺️','📡','🖥️','📱','⚙️']
 
   // Re-read from server each time the panel opens so a remote browser never
   // overwrites apps that were saved by another device.
@@ -311,18 +315,73 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
                 ) : (
                   <ul className="space-y-2 mb-4">
                     {s.webApps.map((app, i) => (
-                      <li key={i} className="flex items-center gap-3 bg-theme-card rounded-lg px-3 py-2">
-                        <span className="text-xl w-7 text-center">{app.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">{app.name}</div>
-                          <div className="text-xs text-slate-500 truncate">{app.url}</div>
-                        </div>
-                        <button
-                          onClick={() => update({ ...s, webApps: s.webApps.filter((_, j) => j !== i) })}
-                          className="px-2 py-1 rounded bg-red-900/50 hover:bg-red-800/70 text-red-300 text-xs transition-colors touch-manipulation flex-shrink-0"
-                        >
-                          Remove
-                        </button>
+                      <li key={i} className="bg-theme-card rounded-lg overflow-hidden">
+                        {editingIndex === i ? (
+                          <div className="p-3 space-y-3">
+                            <div className="flex flex-wrap gap-1.5">
+                              {APP_EMOJIS.map(e => (
+                                <button key={e} type="button"
+                                  onClick={() => setEditApp(a => ({ ...a, icon: e }))}
+                                  className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-colors touch-manipulation ${editApp.icon === e ? 'bg-sky-700 ring-2 ring-sky-400' : 'bg-slate-800 hover:bg-slate-700'}`}
+                                >{e}</button>
+                              ))}
+                            </div>
+                            <input
+                              value={editApp.name}
+                              onChange={e => setEditApp(a => ({ ...a, name: e.target.value }))}
+                              placeholder="Name"
+                              className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none w-full"
+                            />
+                            <input
+                              value={editApp.url}
+                              onChange={e => setEditApp(a => ({ ...a, url: e.target.value }))}
+                              placeholder="URL"
+                              type="url"
+                              className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none w-full"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  const trimmed = { name: editApp.name.trim(), url: editApp.url.trim(), icon: editApp.icon || '🔗' }
+                                  if (!trimmed.name || !trimmed.url) return
+                                  const next = s.webApps.map((a, j) => j === i ? trimmed : a)
+                                  update({ ...s, webApps: next })
+                                  setEditingIndex(null)
+                                }}
+                                disabled={!editApp.name.trim() || !editApp.url.trim()}
+                                className="px-4 py-2 rounded-lg bg-sky-700 hover:bg-sky-600 disabled:opacity-40 transition-colors touch-manipulation text-sm font-medium"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingIndex(null)}
+                                className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors touch-manipulation text-sm"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3 px-3 py-2">
+                            <span className="text-xl w-7 text-center">{app.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm truncate">{app.name}</div>
+                              <div className="text-xs text-slate-500 truncate">{app.url}</div>
+                            </div>
+                            <button
+                              onClick={() => { setEditApp({ ...app }); setEditingIndex(i) }}
+                              className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-xs transition-colors touch-manipulation flex-shrink-0"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => update({ ...s, webApps: s.webApps.filter((_, j) => j !== i) })}
+                              className="px-2 py-1 rounded bg-red-900/50 hover:bg-red-800/70 text-red-300 text-xs transition-colors touch-manipulation flex-shrink-0"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -332,11 +391,10 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
                 <div className="border-t border-[var(--color-divider)] pt-4 space-y-3">
                   <h4 className="text-sm font-medium text-slate-300">Add a new app</h4>
 
-                  {/* Emoji picker */}
                   <div>
                     <span className="text-xs text-slate-500 block mb-1.5">Icon</span>
                     <div className="flex flex-wrap gap-1.5 mb-2">
-                      {['🔗','🌐','📰','📺','🎵','🎮','📷','🏠','🛒','📊','🗒️','💬','🔍','📚','🍴','🍕','🎬','🏋️','💊','🌡️','🚗','✈️','💰','🗺️','📡','🖥️','📱','⚙️'].map(e => (
+                      {APP_EMOJIS.map(e => (
                         <button
                           key={e}
                           type="button"
