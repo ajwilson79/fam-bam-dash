@@ -93,6 +93,7 @@ $CHROMIUM_BIN \\
   --kiosk \\
   --ozone-platform=wayland \\
   --touch-events=enabled \\
+  --enable-virtual-keyboard \\
   --disable-features=TranslateUI \\
   --no-first-run \\
   --disable-restore-session-state \\
@@ -149,7 +150,7 @@ echo "The dashboard will open automatically on next login or reboot."
 echo "  Autostart: $AUTOSTART_FILE"
 echo ""
 echo "To test without rebooting, run:"
-echo "  $CHROMIUM_BIN --noerrdialogs --disable-infobars --kiosk --ozone-platform=wayland --touch-events=enabled \"$KIOSK_URL\""
+echo "  $CHROMIUM_BIN --noerrdialogs --disable-infobars --kiosk --ozone-platform=wayland --touch-events=enabled --enable-virtual-keyboard \"$KIOSK_URL\""
 echo ""
 echo "To change the URL later, edit: $AUTOSTART_FILE"
 echo "To disable kiosk mode, delete: $AUTOSTART_FILE"
