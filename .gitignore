@@ -152,6 +152,9 @@ dist/
 # Docker
 docker-compose.override.yml
 
+# Local-only scripts (personal config, not for open source)
+add-recipe-app.sh
+
 # AI coding platforms
 .openhands/
 .cursor/
