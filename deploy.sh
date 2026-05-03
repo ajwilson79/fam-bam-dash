@@ -1,14 +1,15 @@
 #!/bin/bash
 set -e
 
-cd "$(dirname "$0")"
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "==> Fetching latest from remote..."
+cd "$REPO_DIR"
 git fetch
 git reset --hard origin/main
 
 echo "==> Installing dependencies..."
-cd app
+cd "$REPO_DIR/app"
 npm install
 
 echo "==> Building..."
@@ -16,7 +17,7 @@ npm run build
 
 echo "==> Updating labwc autostart..."
 mkdir -p "$HOME/.config/labwc"
-cp "$(dirname "$0")/config/labwc-autostart" "$HOME/.config/labwc/autostart"
+cp "$REPO_DIR/config/labwc-autostart" "$HOME/.config/labwc/autostart"
 
 echo "==> Rebooting..."
 sudo reboot
