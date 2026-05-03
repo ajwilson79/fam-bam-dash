@@ -169,6 +169,18 @@ function App() {
         <section className="dash-todos">
           <TodoPanel />
         </section>
+
+        <section className="dash-apps">
+          <a
+            href="http://192.168.121.7:3000/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="app-tile"
+          >
+            <span className="app-tile-icon">🍴</span>
+            <span className="app-tile-label">Recipes</span>
+          </a>
+        </section>
       </main>
 
       {!isIdle && (
