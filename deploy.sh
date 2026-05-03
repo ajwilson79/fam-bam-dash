@@ -14,5 +14,9 @@ npm install
 echo "==> Building..."
 npm run build
 
+echo "==> Updating labwc autostart..."
+mkdir -p "$HOME/.config/labwc"
+cp "$(dirname "$0")/config/labwc-autostart" "$HOME/.config/labwc/autostart"
+
 echo "==> Rebooting..."
 sudo reboot
