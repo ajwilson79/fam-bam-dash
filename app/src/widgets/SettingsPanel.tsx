@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { defaultSettings, loadSettings, setSettings, syncSettingsFromServer, type Settings, type WebApp } from '../lib/settings'
+import { defaultSettings, getTabId, loadSettings, setSettings, syncSettingsFromServer, type Settings, type WebApp } from '../lib/settings'
 import { zipToLatLon } from '../lib/weather'
 import CalendarAdmin from './CalendarAdmin'
 import PhotoUpload from './PhotoUpload'
@@ -16,6 +16,65 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
   const [zipStatus, setZipStatus] = useState<{ ok: boolean; msg: string } | null>(null)
   const [zipBusy, setZipBusy] = useState(false)
   const [quitPromptOpen, setQuitPromptOpen] = useState(false)
+  const [restoreStatus, setRestoreStatus] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  async function exportFullBackup() {
+    try {
+      const [sRes, tRes, cRes] = await Promise.all([
+        fetch('/api/settings'),
+        fetch('/api/todos'),
+        fetch('/api/countdowns'),
+      ])
+      const [settings, todos, countdowns] = await Promise.all([sRes.json(), tRes.json(), cRes.json()])
+      const backup = { version: 1, exportedAt: new Date().toISOString(), settings, todos, countdowns }
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+      const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(blob),
+        download: `fam-bam-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      })
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } catch {
+      setRestoreStatus({ ok: false, msg: 'Backup failed — check server connection.' })
+    }
+  }
+
+  async function importFullBackup(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    try {
+      const backup = JSON.parse(await file.text()) as Record<string, unknown>
+      if (!backup.settings && !backup.todos && !backup.countdowns) {
+        throw new Error('Not a valid Fam Bam Dash backup file.')
+      }
+      const headers = { 'Content-Type': 'application/json' }
+      const tabHeader = { 'X-Tab-Id': getTabId() }
+      await Promise.all([
+        backup.settings && fetch('/api/settings', {
+          method: 'POST',
+          headers: { ...headers, ...tabHeader, ...adminHeaders() },
+          body: JSON.stringify(backup.settings),
+        }),
+        backup.todos && fetch('/api/todos', {
+          method: 'POST',
+          headers: { ...headers, ...tabHeader },
+          body: JSON.stringify(backup.todos),
+        }),
+        backup.countdowns && fetch('/api/countdowns', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(backup.countdowns),
+        }),
+      ].filter(Boolean))
+      await syncSettingsFromServer()
+      setS(loadSettings())
+      setRestoreStatus({ ok: true, msg: 'Restored successfully — reloading…' })
+      setTimeout(() => window.location.reload(), 1500)
+    } catch (err) {
+      setRestoreStatus({ ok: false, msg: err instanceof Error ? err.message : 'Restore failed.' })
+    }
+  }
   const [newApp, setNewApp] = useState<WebApp>({ name: '', url: '', icon: '🔗' })
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editApp, setEditApp] = useState<WebApp>({ name: '', url: '', icon: '🔗' })
@@ -282,14 +341,14 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
                   className="px-4 py-2 rounded-lg bg-theme-elevated hover:opacity-80 transition-opacity touch-manipulation">
                   Reset to Defaults
                 </button>
-                <button onClick={() => {
-                  const blob = new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' })
-                  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'fam-bam-settings.json' })
-                  a.click()
-                  URL.revokeObjectURL(a.href)
-                }} className="px-4 py-2 rounded-lg bg-theme-elevated hover:opacity-80 transition-opacity touch-manipulation">
-                  Export JSON
+                <button onClick={exportFullBackup}
+                  className="px-4 py-2 rounded-lg bg-theme-elevated hover:opacity-80 transition-opacity touch-manipulation">
+                  Full Backup
                 </button>
+                <label className="px-4 py-2 rounded-lg bg-theme-elevated hover:opacity-80 transition-opacity touch-manipulation cursor-pointer">
+                  Restore Backup
+                  <input type="file" accept=".json" onChange={importFullBackup} className="hidden" />
+                </label>
                 <button
                   onClick={() => setQuitPromptOpen(true)}
                   className="px-4 py-2 rounded-lg bg-red-900/60 hover:bg-red-800/80 text-red-200 transition-colors touch-manipulation ml-auto"
@@ -297,6 +356,11 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
                   Exit Kiosk
                 </button>
               </div>
+              {restoreStatus && (
+                <p className={`text-sm mt-2 ${restoreStatus.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {restoreStatus.ok ? '✓ ' : '⚠ '}{restoreStatus.msg}
+                </p>
+              )}
             </div>
           )}
 
