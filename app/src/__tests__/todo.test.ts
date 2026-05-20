@@ -8,9 +8,11 @@ import {
   removeItem,
   removeList,
   renameList,
+  reorderItems,
   saveState,
   setActive,
   toggleItem,
+  togglePin,
 } from '../lib/todo'
 
 describe('defaultState', () => {
@@ -141,6 +143,71 @@ describe('clearCompleted', () => {
     const cleared = clearCompleted(toggled, listId)
     expect(cleared.lists[0].items).toHaveLength(1)
     expect(cleared.lists[0].items[0].done).toBe(false)
+  })
+})
+
+describe('togglePin', () => {
+  it('pins an item and moves it to the top', () => {
+    const s0 = defaultState()
+    const listId = s0.lists[0].id
+    let s = addItem(s0, listId, 'first')
+    s = addItem(s, listId, 'second') // 'second' now at index 0, 'first' at index 1
+    const firstId = s.lists[0].items[1].id
+    const pinned = togglePin(s, listId, firstId)
+    expect(pinned.lists[0].items[0].id).toBe(firstId)
+    expect(pinned.lists[0].items[0].pinned).toBe(true)
+  })
+
+  it('unpinning drops the item below the remaining pinned block', () => {
+    const s0 = defaultState()
+    const listId = s0.lists[0].id
+    let s = addItem(s0, listId, 'a')
+    s = addItem(s, listId, 'b')
+    s = addItem(s, listId, 'c') // order: c, b, a
+    const aId = s.lists[0].items[2].id
+    const bId = s.lists[0].items[1].id
+    s = togglePin(s, listId, aId) // a pinned, top
+    s = togglePin(s, listId, bId) // b pinned, top → order: b, a, c
+    expect(s.lists[0].items.map(i => i.text)).toEqual(['b', 'a', 'c'])
+    s = togglePin(s, listId, bId) // unpin b → drops below pinned 'a'
+    expect(s.lists[0].items[0].text).toBe('a')
+    expect(s.lists[0].items[1].text).toBe('b')
+    expect(s.lists[0].items[1].pinned).toBeUndefined()
+  })
+
+  it('addItem inserts a new item below pinned items', () => {
+    const s0 = defaultState()
+    const listId = s0.lists[0].id
+    let s = addItem(s0, listId, 'pinme')
+    s = togglePin(s, listId, s.lists[0].items[0].id)
+    s = addItem(s, listId, 'fresh')
+    expect(s.lists[0].items[0].text).toBe('pinme')
+    expect(s.lists[0].items[1].text).toBe('fresh')
+  })
+})
+
+describe('reorderItems', () => {
+  it('moves an item within its list', () => {
+    const s0 = defaultState()
+    const listId = s0.lists[0].id
+    let s = addItem(s0, listId, 'a')
+    s = addItem(s, listId, 'b')
+    s = addItem(s, listId, 'c') // order: c, b, a
+    const moved = reorderItems(s, listId, 0, 2)
+    expect(moved.lists[0].items.map(i => i.text)).toEqual(['b', 'a', 'c'])
+  })
+
+  it('ignores out-of-bounds indices', () => {
+    const s0 = defaultState()
+    const listId = s0.lists[0].id
+    const s = addItem(s0, listId, 'only')
+    expect(reorderItems(s, listId, 0, 5)).toEqual(s)
+  })
+
+  it('ignores an unknown list id', () => {
+    const s0 = defaultState()
+    const s = addItem(s0, s0.lists[0].id, 'x')
+    expect(reorderItems(s, 'ghost-list', 0, 0)).toEqual(s)
   })
 })
 

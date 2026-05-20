@@ -99,7 +99,7 @@ export default function TodoPanel() {
               <li className="todo-panel-empty">Nothing here yet</li>
             ) : (
               list.items.map(item => (
-                <li key={item.id} className={`todo-panel-item ${item.done ? 'is-done' : ''}`}>
+                <li key={item.id} className={`todo-panel-item ${item.done ? 'is-done' : ''} ${item.pinned ? 'is-pinned' : ''}`}>
                   <label className="todo-panel-check-label">
                     <input
                       type="checkbox"
@@ -108,6 +108,7 @@ export default function TodoPanel() {
                     />
                     <span className="todo-panel-check-box" />
                   </label>
+                  {item.pinned && <span className="todo-panel-pin" title="Pinned">📌</span>}
                   <span className="todo-panel-text">{item.text}</span>
                   {item.done && item.checkedAt && (
                     <span className="todo-panel-countdown">{timeLeft(item.checkedAt, autoRemoveMs)}</span>

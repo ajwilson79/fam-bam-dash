@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   addItem, addList, editItem, loadState, removeItem, removeList,
-  renameList, reorderLists, saveState, subscribeTodo, type TodoState,
+  renameList, reorderItems, reorderLists, saveState, subscribeTodo,
+  togglePin, type TodoState,
 } from '../lib/todo'
 
 export default function TodoAdmin() {
@@ -13,14 +14,17 @@ export default function TodoAdmin() {
   const [editingItem, setEditingItem] = useState<{ listId: string; itemId: string } | null>(null)
   const [editItemText, setEditItemText] = useState('')
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+  const [itemDragOver, setItemDragOver] = useState<{ listId: string; idx: number } | null>(null)
 
   const dragIdx = useRef<number | null>(null)
   const canDrag = useRef(false)
+  const itemDragIdx = useRef<{ listId: string; idx: number } | null>(null)
+  const itemCanDrag = useRef(false)
 
   useEffect(() => { return subscribeTodo(() => setState(loadState())) }, [])
 
   useEffect(() => {
-    const up = () => { canDrag.current = false }
+    const up = () => { canDrag.current = false; itemCanDrag.current = false }
     window.addEventListener('mouseup', up)
     return () => window.removeEventListener('mouseup', up)
   }, [])
@@ -46,6 +50,34 @@ export default function TodoAdmin() {
     dragIdx.current = null
   }
   function onDragEnd() { setDragOverIdx(null); dragIdx.current = null }
+
+  // ── item drag handlers (reorder within a list) ─────────────────────────────
+  function onItemDragStart(e: React.DragEvent, listId: string, idx: number) {
+    e.stopPropagation() // don't let the parent list start dragging too
+    if (!itemCanDrag.current) { e.preventDefault(); return }
+    itemDragIdx.current = { listId, idx }
+    e.dataTransfer.effectAllowed = 'move'
+  }
+  function onItemDragOver(e: React.DragEvent, listId: string, idx: number) {
+    if (itemDragIdx.current?.listId !== listId) return // only within the same list
+    e.preventDefault()
+    e.stopPropagation()
+    setItemDragOver({ listId, idx })
+  }
+  function onItemDrop(e: React.DragEvent, listId: string, toIdx: number) {
+    const from = itemDragIdx.current
+    if (from?.listId !== listId) return
+    e.preventDefault()
+    e.stopPropagation()
+    setItemDragOver(null)
+    if (from.idx !== toIdx) commit(reorderItems(state, listId, from.idx, toIdx))
+    itemDragIdx.current = null
+  }
+  function onItemDragEnd(e: React.DragEvent) {
+    e.stopPropagation()
+    setItemDragOver(null)
+    itemDragIdx.current = null
+  }
 
   // ── form handlers ──────────────────────────────────────────────────────────
   function handleAddList(e: React.FormEvent) {
@@ -195,8 +227,17 @@ export default function TodoAdmin() {
             <div className="todo-admin-empty">No tasks yet.</div>
           ) : (
             <ul className="todo-admin-items">
-              {list.items.map(item => (
-                <li key={item.id} className={`todo-admin-item ${item.done ? 'is-done' : ''}`}>
+              {list.items.map((item, idx) => (
+                <li
+                  key={item.id}
+                  className={`todo-admin-item ${item.done ? 'is-done' : ''} ${item.pinned ? 'is-pinned' : ''} ${itemDragOver?.listId === list.id && itemDragOver?.idx === idx ? 'drag-over' : ''}`}
+                  draggable
+                  onDragStart={e => onItemDragStart(e, list.id, idx)}
+                  onDragOver={e => onItemDragOver(e, list.id, idx)}
+                  onDragLeave={e => { e.stopPropagation(); setItemDragOver(null) }}
+                  onDrop={e => onItemDrop(e, list.id, idx)}
+                  onDragEnd={onItemDragEnd}
+                >
                   {editingItem?.itemId === item.id ? (
                     <div className="todo-admin-rename-row" style={{ flex: 1 }}>
                       <input
@@ -223,11 +264,20 @@ export default function TodoAdmin() {
                     </div>
                   ) : (
                     <>
+                      <span
+                        className="todo-drag-handle"
+                        onMouseDown={() => { itemCanDrag.current = true }}
+                        title="Drag to reorder"
+                      >⠿</span>
                       <span className="todo-admin-item-text">{item.text}</span>
                       {item.done && <span className="todo-admin-done-badge">checked</span>}
                       <button
-                        className="todo-admin-item-delete"
-                        style={{ marginLeft: 'auto', marginRight: '0.25rem', fontSize: '0.75rem', opacity: 0.6 }}
+                        className={`todo-admin-item-pin ${item.pinned ? 'is-pinned' : ''}`}
+                        onClick={() => commit(togglePin(state, list.id, item.id))}
+                        title={item.pinned ? 'Unpin' : 'Pin to top'}
+                      >📌</button>
+                      <button
+                        className="todo-admin-item-edit"
                         onClick={() => { setEditItemText(item.text); setEditingItem({ listId: list.id, itemId: item.id }) }}
                         title="Edit item"
                       >✎</button>

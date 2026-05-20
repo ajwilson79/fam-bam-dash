@@ -6,6 +6,7 @@ export type TodoItem = {
   done: boolean
   updatedAt: number
   checkedAt?: number  // set when checked; item auto-removes 10 min after this
+  pinned?: boolean    // pinned items stay at the top, above new additions
 }
 export type TodoList = { id: string; name: string; items: TodoItem[] }
 export type TodoState = { lists: TodoList[]; activeListId: string }
@@ -134,7 +135,16 @@ export function setActive(state: TodoState, listId: string): TodoState {
 export function addItem(state: TodoState, listId: string, text: string): TodoState {
   const item: TodoItem = { id: uid('item-'), text: text.trim(), done: false, updatedAt: now() }
   if (!item.text) return state
-  return { ...state, lists: state.lists.map(l => l.id === listId ? { ...l, items: [item, ...l.items] } : l) }
+  return {
+    ...state,
+    lists: state.lists.map(l => {
+      if (l.id !== listId) return l
+      // Insert below any pinned items so a pinned task is never buried by a new one.
+      const firstUnpinned = l.items.findIndex(it => !it.pinned)
+      const at = firstUnpinned === -1 ? l.items.length : firstUnpinned
+      return { ...l, items: [...l.items.slice(0, at), item, ...l.items.slice(at)] }
+    }),
+  }
 }
 
 export function toggleItem(state: TodoState, listId: string, itemId: string): TodoState {
@@ -178,6 +188,42 @@ export function reorderLists(state: TodoState, fromIdx: number, toIdx: number): 
   const [moved] = lists.splice(fromIdx, 1)
   lists.splice(toIdx, 0, moved)
   return { ...state, lists }
+}
+
+// Moves an item within its list. Indices are positions in the list's items array.
+export function reorderItems(state: TodoState, listId: string, fromIdx: number, toIdx: number): TodoState {
+  if (fromIdx === toIdx) return state
+  return {
+    ...state,
+    lists: state.lists.map(l => {
+      if (l.id !== listId) return l
+      if (fromIdx < 0 || fromIdx >= l.items.length || toIdx < 0 || toIdx >= l.items.length) return l
+      const items = [...l.items]
+      const [moved] = items.splice(fromIdx, 1)
+      items.splice(toIdx, 0, moved)
+      return { ...l, items }
+    }),
+  }
+}
+
+// Toggles an item's pinned flag. Pinning moves the item to the very top;
+// unpinning drops it just below the remaining pinned block.
+export function togglePin(state: TodoState, listId: string, itemId: string): TodoState {
+  return {
+    ...state,
+    lists: state.lists.map(l => {
+      if (l.id !== listId) return l
+      const target = l.items.find(it => it.id === itemId)
+      if (!target) return l
+      const pinned = !target.pinned
+      const updated: TodoItem = { ...target, pinned: pinned || undefined, updatedAt: now() }
+      const rest = l.items.filter(it => it.id !== itemId)
+      if (pinned) return { ...l, items: [updated, ...rest] }
+      const firstUnpinned = rest.findIndex(it => !it.pinned)
+      const at = firstUnpinned === -1 ? rest.length : firstUnpinned
+      return { ...l, items: [...rest.slice(0, at), updated, ...rest.slice(at)] }
+    }),
+  }
 }
 
 export function clearCompleted(state: TodoState, listId: string): TodoState {

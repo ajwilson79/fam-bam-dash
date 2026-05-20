@@ -618,6 +618,13 @@ body {
   color: var(--color-text-muted);
 }
 
+.todo-panel-item.is-pinned { box-shadow: inset 2px 0 0 var(--color-accent); }
+.todo-panel-pin {
+  font-size: clamp(8px, 0.85vw, 10px);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .todo-panel-countdown {
   font-size: clamp(8px, 0.8vw, 10px);
   color: var(--color-text-muted);
@@ -787,6 +794,42 @@ body {
 }
 .todo-admin-item:hover .todo-admin-item-delete { opacity: 1; }
 .todo-admin-item-delete:hover { color: #dc2626; }
+
+/* Pinned + drag-over states for admin items */
+.todo-admin-item.is-pinned { box-shadow: inset 3px 0 0 var(--color-accent); }
+.todo-admin-item.drag-over {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.todo-admin-item-edit,
+.todo-admin-item-pin {
+  background: none;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  padding: 0 0.15rem;
+  transition: opacity 0.1s, filter 0.1s, color 0.1s;
+}
+.todo-admin-item-edit {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  opacity: 0;
+}
+.todo-admin-item:hover .todo-admin-item-edit { opacity: 0.7; }
+.todo-admin-item-edit:hover { opacity: 1; color: var(--color-accent); }
+
+/* Pin button: greyed-out and hover-only until pinned, then full-colour and always shown */
+.todo-admin-item-pin {
+  font-size: 0.85rem;
+  margin-left: auto;
+  opacity: 0;
+  filter: grayscale(1);
+}
+.todo-admin-item:hover .todo-admin-item-pin { opacity: 0.6; }
+.todo-admin-item-pin.is-pinned { opacity: 1; filter: none; }
+.todo-admin-item-pin:hover { opacity: 1; filter: none; }
 
 /* Shared admin button */
 .todo-admin-btn {

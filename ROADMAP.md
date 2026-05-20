@@ -4,9 +4,7 @@ Future improvements to consider. No particular order or commitment.
 
 ## Quick Wins
 
-- **Drag-to-reorder todo items** — Lists can be reordered but individual items within a list can't. Same drag-handle pattern already used for lists.
 - **Auto dark/light mode schedule** — Switch theme based on time of day (e.g. light 7am–9pm, dark otherwise), using the existing motionSensor night hours or a new setting.
-- **Todo item priority / pinning** — Pin an item to the top of a list so it never gets buried under new additions.
 - **Slideshow pause button** — Tap/click to freeze the current photo so the family can look at it longer before it advances.
 
 ## New Widgets
