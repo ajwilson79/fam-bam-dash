@@ -159,4 +159,5 @@ add-recipe-app.sh
 .openhands/
 .cursor/
 .aider/
+.claude/settings.local.json
 app/data/
