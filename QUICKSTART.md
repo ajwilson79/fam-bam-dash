@@ -82,6 +82,8 @@ Settings → ✅ To-Do:
 - **Add items** to each list
 - On the dashboard, check off items; they disappear automatically after the configured delay (default 10 minutes, adjustable in Settings → ⚙️ Settings)
 - Drag the **⠿** handle to reorder columns on the dashboard or in the admin panel
+- In the admin panel, drag the **⠿** handle on an item to reorder it within its list
+- Click the **📌** button on an item to pin it to the top of its list — pinned items stay above new additions
 
 ## Common Commands
 

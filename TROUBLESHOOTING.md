@@ -77,8 +77,8 @@ The slideshow listens for a `photos-changed` DOM event fired after upload. If it
 ### Checked items not auto-removing
 Items auto-remove after the configured delay (default 10 minutes, adjustable in Settings → ⚙️ Settings → To-Do). The cleanup runs on a 30-second timer. If items never disappear, check the browser console for JavaScript errors.
 
-### Can't drag to reorder lists
-Drag must start from the **⠿ handle** on the left side of each list header, not from the list body.
+### Can't drag to reorder lists or items
+Drag must start from the **⠿ handle** — on the left side of each list header for lists, or on the left side of an item row for items. Dragging from the body of a list or item won't start a reorder.
 
 ## Screensaver / Picture Frame Mode
 

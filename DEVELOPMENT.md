@@ -36,7 +36,7 @@ fam-bam-dash/
 │   │   │   ├── oauth.ts          # Google OAuth 2.0 PKCE flow, token storage
 │   │   │   ├── ical.ts           # iCal parser (no external library)
 │   │   │   ├── photos.ts         # Photo loading (bundled + uploaded + Google Photos)
-│   │   │   ├── todo.ts           # Todo state, pub/sub, auto-remove, drag reorder
+│   │   │   ├── todo.ts           # Todo state, pub/sub, auto-remove, drag reorder, pinning
 │   │   │   ├── retry.ts          # withRetry() helper for fetch calls
 │   │   │   └── utils.ts          # debounce and other shared utilities
 │   │   ├── widgets/              # React components
@@ -48,7 +48,7 @@ fam-bam-dash/
 │   │   │   ├── SettingsPanel.tsx       # 5-tab settings modal (Settings, Calendars, Photos, To-Do, Apps)
 │   │   │   ├── CalendarAdmin.tsx       # OAuth connect + calendar toggle UI
 │   │   │   ├── PhotoUpload.tsx         # Drag-and-drop photo upload UI
-│   │   │   └── TodoAdmin.tsx           # Add/rename/delete lists and items
+│   │   │   └── TodoAdmin.tsx           # Add/rename/delete/reorder/pin lists and items
 │   │   ├── App.tsx               # Root layout, theme, OAuth callback handling
 │   │   ├── main.tsx              # React entry point
 │   │   └── index.css             # All CSS (layout grid, widget styles, themes)
@@ -115,13 +115,14 @@ The `sseClients` set and `broadcast()` function live at module scope in `vite.co
 
 ### Todo (`lib/todo.ts`)
 - Type: `TodoState` – `{ lists: TodoList[] }`, each list has `{ id, name, items[] }`
-- Each item: `{ id, text, done, updatedAt, checkedAt? }`
+- Each item: `{ id, text, done, updatedAt, checkedAt?, pinned? }`
 - Stored in `localStorage` under `fam-bam-todo`; also synced to `/api/todos` on every save
 - On startup, `syncFromServer()` restores from `data/todos.json` if localStorage is empty
 - Pub/sub: `subscribeTodo(fn)` / `saveState(s)` – keeps dashboard and admin in sync
 - `toggleItem()` sets `checkedAt` when checked; `autoRemoveExpired(state, ms)` removes items older than the configured delay (default 10 min, configurable in Settings)
 - `editItem(state, listId, itemId, text)` updates item text and `updatedAt`; returns new state without mutation
-- `reorderLists()` is pure (no mutation)
+- `reorderLists()` / `reorderItems(state, listId, fromIdx, toIdx)` reorder lists and items within a list; both pure (no mutation)
+- `togglePin(state, listId, itemId)` flags an item `pinned` and moves it to the top; `addItem()` inserts new items below the pinned block so a pin is never buried
 
 ### Google Photos (`lib/photos.ts`)
 - `GisWindow`, `GisTokenClient`, `GisTokenClientConfig`, `GisTokenResponse` — local interfaces that type the Google Identity Services script injected at runtime via `<script src="https://accounts.google.com/gsi/client">`. Avoids `any` casts when calling `window.google.accounts.oauth2.initTokenClient`.

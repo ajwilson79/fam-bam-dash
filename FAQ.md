@@ -101,6 +101,12 @@ Yes. In Settings → ✅ To-Do, each item has a ✎ pencil button next to the ×
 ### Can I reorder the lists?
 Yes. On the dashboard, drag the **⠿** handle on a list column to move it. You can also reorder them in Settings → ✅ To-Do using the same drag handle.
 
+### Can I reorder items within a list?
+Yes. In Settings → ✅ To-Do, each item has a **⠿** drag handle on its left side. Drag it up or down to reorder items within that list.
+
+### Can I pin an item to the top?
+Yes. In Settings → ✅ To-Do, each item has a **📌** pin button. Clicking it moves the item to the top of its list and keeps it there — new tasks are added below pinned items, so a pin never gets buried. Pinned items show a 📌 marker and an accent edge on the dashboard. Click 📌 again to unpin.
+
 ### Are todos backed up?
 Yes. Every save writes to both `localStorage` and `app/data/todos.json` on the server. If your browser clears localStorage, the app restores from the server file on next load.
 
