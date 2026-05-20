@@ -25,6 +25,7 @@ Future improvements to consider. No particular order or commitment.
 
 ## Infrastructure / Quality
 
+- **Server-side OAuth token storage** — Google Calendar accounts and refresh tokens currently live in browser `localStorage`, so the Pi kiosk must run its own OAuth flow and the connection is lost if the kiosk browser's storage is wiped (Chromium profile reset, SD reflash, storage eviction). Move accounts/tokens to a server-side `data/accounts.json` (same pattern as `settings.json`/`todos.json`) and do event fetching server-side via a new `/api/events` endpoint. Lets you connect Google once from any device, survives browser resets, keeps refresh tokens off the browser, and retires the `calendar-cache` band-aid. The 7-day refresh-token expiry was already solved separately by publishing the OAuth consent screen to "In production" — this is a robustness/convenience improvement, not a bug fix. ~200 lines: new `/api/accounts` + `/api/events` plugins in `vite.config.ts`, a server-side token-refresh loop, and rewiring `oauth.ts`/`gapi.ts`.
 - **Landscape layout** — The grid is currently portrait-only. A second CSS layout for widescreen TVs and monitors would open the project up to more deployments.
 - **Per-list todo colors** — Let each todo list column have a distinct accent color to make them visually distinct at a glance.
 - **PWA support** — Add `manifest.json` and a service worker so the dashboard can be installed as a home screen app on phones and tablets, with a basic offline fallback.
