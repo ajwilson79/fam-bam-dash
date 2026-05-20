@@ -28,8 +28,11 @@ describe('withRetry', () => {
     const fn = vi.fn().mockRejectedValue(new Error('always fails'))
 
     const promise = withRetry(fn, { maxAttempts: 3, baseDelayMs: 100 })
+    // Attach the rejection handler before advancing timers, otherwise the
+    // promise rejects unhandled while runAllTimersAsync() is in flight.
+    const assertion = expect(promise).rejects.toThrow('always fails')
     await vi.runAllTimersAsync()
-    await expect(promise).rejects.toThrow('always fails')
+    await assertion
     expect(fn).toHaveBeenCalledTimes(3)
   })
 
@@ -37,8 +40,9 @@ describe('withRetry', () => {
     const fn = vi.fn().mockRejectedValue(new Error('fail'))
 
     const promise = withRetry(fn, { maxAttempts: 1, baseDelayMs: 100 })
+    const assertion = expect(promise).rejects.toThrow()
     await vi.runAllTimersAsync()
-    await expect(promise).rejects.toThrow()
+    await assertion
     expect(fn).toHaveBeenCalledTimes(1)
   })
 })

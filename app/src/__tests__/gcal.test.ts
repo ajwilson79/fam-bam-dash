@@ -54,7 +54,8 @@ describe('fetchUpcomingEvents', () => {
     ]
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: false })  // iCal probe fails → fall through to JSON API
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ items: mockItems }), text: async () => '' }),
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ items: mockItems }), text: async () => '' })
+      .mockResolvedValue({ ok: true, json: async () => ({}), text: async () => '' }),  // calendar-cache POST
     )
 
     const events = await fetchUpcomingEvents({ calendarId: 'test@test.com' })
@@ -65,7 +66,8 @@ describe('fetchUpcomingEvents', () => {
   it('returns empty array when items is absent', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: false })  // iCal probe fails → fall through to JSON API
-      .mockResolvedValueOnce({ ok: true, json: async () => ({}), text: async () => '' }),
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}), text: async () => '' })
+      .mockResolvedValue({ ok: true, json: async () => ({}), text: async () => '' }),  // calendar-cache POST
     )
     const events = await fetchUpcomingEvents({ calendarId: 'test@test.com' })
     expect(events).toEqual([])
