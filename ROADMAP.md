@@ -4,7 +4,6 @@ Future improvements to consider. No particular order or commitment.
 
 ## Quick Wins
 
-- **Auto dark/light mode schedule** — Switch theme based on time of day (e.g. light 7am–9pm, dark otherwise), using the existing motionSensor night hours or a new setting.
 - **Slideshow pause button** — Tap/click to freeze the current photo so the family can look at it longer before it advances.
 
 ## New Widgets

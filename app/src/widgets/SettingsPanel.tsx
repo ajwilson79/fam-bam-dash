@@ -324,14 +324,41 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
               {/* Theme */}
               <section className="bg-theme-elevated rounded-lg p-4">
                 <h3 className="font-semibold text-lg mb-3">🎨 Theme</h3>
-                <div className="flex gap-6">
-                  {(['dark', 'light'] as const).map(t => (
-                    <label key={t} className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="theme" value={t} checked={s.theme === t}
-                        onChange={() => update({ ...s, theme: t })} className="cursor-pointer" />
-                      <span className="capitalize">{t}</span>
-                    </label>
-                  ))}
+                <div className="space-y-4">
+                  <div className={`flex gap-6 ${s.autoTheme.enabled ? 'opacity-40' : ''}`}>
+                    {(['dark', 'light'] as const).map(t => (
+                      <label key={t} className={`flex items-center gap-2 ${s.autoTheme.enabled ? '' : 'cursor-pointer'}`}>
+                        <input type="radio" name="theme" value={t} checked={s.theme === t}
+                          disabled={s.autoTheme.enabled}
+                          onChange={() => update({ ...s, theme: t })} className="cursor-pointer" />
+                        <span className="capitalize">{t}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={s.autoTheme.enabled}
+                      onChange={e => update({ ...s, autoTheme: { ...s.autoTheme, enabled: e.target.checked } })}
+                      className="w-5 h-5 cursor-pointer" />
+                    <span>Switch automatically by time of day</span>
+                  </label>
+                  {s.autoTheme.enabled && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="flex flex-col">
+                        <span className="text-sm text-slate-300 mb-1">Light mode starts (hour, 0–23)</span>
+                        <input type="number" min={0} max={23}
+                          value={s.autoTheme.lightStartHour}
+                          onChange={e => update({ ...s, autoTheme: { ...s.autoTheme, lightStartHour: Math.min(23, Math.max(0, Number(e.target.value))) } })}
+                          className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none" />
+                      </label>
+                      <label className="flex flex-col">
+                        <span className="text-sm text-slate-300 mb-1">Dark mode starts (hour, 0–23)</span>
+                        <input type="number" min={0} max={23}
+                          value={s.autoTheme.darkStartHour}
+                          onChange={e => update({ ...s, autoTheme: { ...s.autoTheme, darkStartHour: Math.min(23, Math.max(0, Number(e.target.value))) } })}
+                          className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none" />
+                      </label>
+                    </div>
+                  )}
                 </div>
               </section>
 

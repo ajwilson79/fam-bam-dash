@@ -106,7 +106,8 @@ The `sseClients` set and `broadcast()` function live at module scope in `vite.co
 ## State Management
 
 ### Settings (`lib/settings.ts`)
-- Types: `Settings` – weather, calendar, slideshow, todo, motionSensor, theme, webApps; `WebApp` – `{ name, url, icon }`
+- Types: `Settings` – weather, calendar, slideshow, todo, idle, motionSensor, theme, autoTheme, webApps; `WebApp` – `{ name, url, icon }`
+- `themeForHour()` / `effectiveTheme()` are pure helpers resolving the displayed theme (manual `theme`, or the scheduled theme when `autoTheme.enabled`)
 - Stored in `localStorage` under `fam-bam-settings`; also synced to `/api/settings` on every save
 - On startup, `syncSettingsFromServer()` restores from `data/settings.json` — server is always authoritative
 - `SettingsPanel` also calls `syncSettingsFromServer()` when it opens so a remote browser never overwrites data from another device

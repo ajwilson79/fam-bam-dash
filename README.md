@@ -41,7 +41,7 @@ Click the gear icon (bottom-right) to open Settings. The panel has four tabs:
 
 | Tab | What you configure |
 |-----|-------------------|
-| ⚙️ Settings | Weather ZIP code, units (°F/mph or °C/km/h), refresh interval, slideshow interval & shuffle, screensaver idle timeout, motion sensor night hours & screen-off timeouts, to-do auto-remove delay, dark/light theme, exit kiosk (PIN gated) |
+| ⚙️ Settings | Weather ZIP code, units (°F/mph or °C/km/h), refresh interval, slideshow interval & shuffle, screensaver idle timeout, motion sensor night hours & screen-off timeouts, to-do auto-remove delay, dark/light theme (manual or auto-switching by time of day), exit kiosk (PIN gated) |
 | 📅 Calendars | Connect Google accounts via OAuth, sync calendar list, toggle individual calendars on/off |
 | 🖼️ Photos | Drag-and-drop photo upload; delete uploaded photos |
 | ✅ To-Do | Add/rename/delete lists; add, edit, and delete items; drag to reorder lists and items; pin items to the top |

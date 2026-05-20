@@ -129,6 +129,9 @@ Yes. Settings → ⚙️ Settings → 💤 Screensaver → uncheck **Enable pict
 ### How do I toggle dark/light mode?
 Click the **☀ / ☾** floating button in the bottom-right corner of the dashboard (next to the gear icon).
 
+### Can the theme switch automatically?
+Yes. In Settings → ⚙️ Settings → 🎨 Theme, check **Switch automatically by time of day** and set the hours the light and dark themes begin (e.g. light at 7, dark at 21). The display re-checks every minute and flips at the configured times — no reload needed. While auto mode is on, the ☀/☾ floating button is hidden and the manual dark/light choice is disabled, since the schedule controls the theme.
+
 ### Is the layout customizable?
 The current layout is a fixed two-column portrait grid. The left column shows the calendar; the right column shows photos, clock + weather, and to-do lists. To change the layout, edit `App.tsx` and `index.css`.
 

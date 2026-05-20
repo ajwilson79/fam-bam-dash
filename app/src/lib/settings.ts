@@ -14,7 +14,12 @@ export type Settings = {
     dayScreenOffMinutes: number   // minutes of no motion before screen off during day
     nightScreenOffMinutes: number // minutes of no motion before screen off at night
   }
-  theme: 'dark' | 'light'
+  theme: 'dark' | 'light'                  // manual choice; used when autoTheme is off
+  autoTheme: {
+    enabled: boolean
+    lightStartHour: number  // 0–23, hour the light theme begins (default 7 = 7am)
+    darkStartHour: number   // 0–23, hour the dark theme begins (default 21 = 9pm)
+  }
   webApps: WebApp[]
 }
 
@@ -55,8 +60,28 @@ export function defaultSettings(): Settings {
       nightScreenOffMinutes: 1,
     },
     theme: 'dark',
+    autoTheme: { enabled: false, lightStartHour: 7, darkStartHour: 21 },
     webApps: [],
   }
+}
+
+// Returns 'light' if `hour` falls in the light window [lightStart, darkStart),
+// otherwise 'dark'. Handles windows that wrap past midnight (lightStart > darkStart).
+export function themeForHour(hour: number, lightStart: number, darkStart: number): 'dark' | 'light' {
+  if (lightStart === darkStart) return 'dark'
+  const inLight = lightStart < darkStart
+    ? hour >= lightStart && hour < darkStart
+    : hour >= lightStart || hour < darkStart
+  return inLight ? 'light' : 'dark'
+}
+
+// The theme that should currently be displayed: the scheduled theme when
+// autoTheme is enabled, otherwise the manually chosen `theme`.
+export function effectiveTheme(s: Settings, now = new Date()): 'dark' | 'light' {
+  if (s.autoTheme.enabled) {
+    return themeForHour(now.getHours(), s.autoTheme.lightStartHour, s.autoTheme.darkStartHour)
+  }
+  return s.theme
 }
 
 function num(val: unknown, fallback: number, min: number, max: number): number {
@@ -86,6 +111,7 @@ function validateSettings(raw: unknown): Settings {
   const td = obj(r.todo)
   const il = obj(r.idle)
   const ms = obj(r.motionSensor)
+  const at = obj(r.autoTheme)
   return {
     weather: {
       zip: strOr(w.zip, def.weather.zip),
@@ -118,6 +144,11 @@ function validateSettings(raw: unknown): Settings {
       nightScreenOffMinutes: Math.round(num(ms.nightScreenOffMinutes, def.motionSensor.nightScreenOffMinutes, 1, 60)),
     },
     theme: r.theme === 'light' ? 'light' : 'dark',
+    autoTheme: {
+      enabled: boolOr(at.enabled, def.autoTheme.enabled),
+      lightStartHour: Math.round(num(at.lightStartHour, def.autoTheme.lightStartHour, 0, 23)),
+      darkStartHour: Math.round(num(at.darkStartHour, def.autoTheme.darkStartHour, 0, 23)),
+    },
     webApps: (Array.isArray(r.webApps) ? r.webApps : [])
       .filter((a): a is Record<string, unknown> => a !== null && typeof a === 'object')
       .map(a => ({ name: strOr(a.name, ''), url: strOr(a.url, ''), icon: strOr(a.icon, '🔗') }))

@@ -8,7 +8,7 @@ import VirtualKeyboard from './widgets/VirtualKeyboard'
 import Clock from './widgets/Clock'
 import TodoPanel from './widgets/TodoPanel'
 import { useEffect, useRef, useState } from 'react'
-import { getTabId, loadSettings, setSettings, subscribeSettings, syncSettingsFromServer, type WebApp } from './lib/settings'
+import { effectiveTheme, getTabId, loadSettings, setSettings, subscribeSettings, syncSettingsFromServer, type WebApp } from './lib/settings'
 import { handleOAuthCallback } from './lib/oauth'
 import { syncCalendars } from './lib/gapi'
 import { syncFromServer } from './lib/todo'
@@ -20,7 +20,8 @@ function App() {
   const [pinPromptOpen, setPinPromptOpen] = useState(false)
   const [activeApp, setActiveApp] = useState<WebApp | null>(null)
   const [keyboardVisible, setKeyboardVisible] = useState(false)
-  const [theme, setTheme] = useState(() => loadSettings().theme)
+  const [theme, setTheme] = useState(() => effectiveTheme(loadSettings()))
+  const [autoThemeOn, setAutoThemeOn] = useState(() => loadSettings().autoTheme.enabled)
   const [webApps, setWebApps] = useState(() => loadSettings().webApps)
   const [isIdle, setIsIdle] = useState(false)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -68,10 +69,19 @@ function App() {
   useEffect(() => {
     const unsub = subscribeSettings(() => {
       const s = loadSettings()
-      setTheme(s.theme)
+      setTheme(effectiveTheme(s))
+      setAutoThemeOn(s.autoTheme.enabled)
       setWebApps(s.webApps)
     })
     return () => { unsub() }
+  }, [])
+
+  // Auto dark/light schedule: re-evaluate the effective theme every minute so
+  // the display flips at the configured hours without a reload. A no-op when
+  // autoTheme is disabled (effectiveTheme just returns the manual choice).
+  useEffect(() => {
+    const id = setInterval(() => setTheme(effectiveTheme(loadSettings())), 60_000)
+    return () => clearInterval(id)
   }, [])
 
   // Idle screensaver: reset timer on any activity; enter idle when timer fires
@@ -216,18 +226,20 @@ function App() {
 
       {!isIdle && (
         <div className="dash-fabs">
-          <button
-            onClick={() => {
-              const next = theme === 'dark' ? 'light' : 'dark'
-              setTheme(next)
-              setSettings({ ...loadSettings(), theme: next })
-            }}
-            className="settings-fab"
-            aria-label="Toggle theme"
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {theme === 'dark' ? '☀' : '☾'}
-          </button>
+          {!autoThemeOn && (
+            <button
+              onClick={() => {
+                const next = theme === 'dark' ? 'light' : 'dark'
+                setTheme(next)
+                setSettings({ ...loadSettings(), theme: next })
+              }}
+              className="settings-fab"
+              aria-label="Toggle theme"
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? '☀' : '☾'}
+            </button>
+          )}
           <button
             onClick={requestOpenSettings}
             className="settings-fab"

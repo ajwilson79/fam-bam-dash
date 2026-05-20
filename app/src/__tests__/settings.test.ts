@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { defaultSettings, loadSettings, setSettings, subscribeSettings } from '../lib/settings'
+import {
+  defaultSettings, effectiveTheme, loadSettings, setSettings, subscribeSettings, themeForHour,
+} from '../lib/settings'
 
 describe('defaultSettings', () => {
   it('returns valid defaults', () => {
@@ -66,6 +68,59 @@ describe('loadSettings', () => {
   it('defaults unknown theme to dark', () => {
     localStorage.setItem('fam-bam-settings', JSON.stringify({ theme: 'purple' }))
     expect(loadSettings().theme).toBe('dark')
+  })
+
+  it('defaults autoTheme and clamps out-of-range hours', () => {
+    expect(loadSettings().autoTheme).toEqual(defaultSettings().autoTheme)
+    localStorage.setItem('fam-bam-settings', JSON.stringify({
+      autoTheme: { enabled: true, lightStartHour: 99, darkStartHour: -5 },
+    }))
+    const s = loadSettings()
+    expect(s.autoTheme.enabled).toBe(true)
+    expect(s.autoTheme.lightStartHour).toBe(23)
+    expect(s.autoTheme.darkStartHour).toBe(0)
+  })
+})
+
+describe('themeForHour', () => {
+  it('returns light inside a normal daytime window [7, 21)', () => {
+    expect(themeForHour(7, 7, 21)).toBe('light')
+    expect(themeForHour(12, 7, 21)).toBe('light')
+    expect(themeForHour(20, 7, 21)).toBe('light')
+  })
+
+  it('returns dark outside the window, boundary-exclusive at darkStart', () => {
+    expect(themeForHour(21, 7, 21)).toBe('dark')
+    expect(themeForHour(23, 7, 21)).toBe('dark')
+    expect(themeForHour(6, 7, 21)).toBe('dark')
+  })
+
+  it('handles a window that wraps past midnight (light 21 → 7)', () => {
+    expect(themeForHour(23, 21, 7)).toBe('light')
+    expect(themeForHour(3, 21, 7)).toBe('light')
+    expect(themeForHour(7, 21, 7)).toBe('dark')
+    expect(themeForHour(12, 21, 7)).toBe('dark')
+  })
+
+  it('returns dark when the two hours are equal', () => {
+    expect(themeForHour(10, 9, 9)).toBe('dark')
+  })
+})
+
+describe('effectiveTheme', () => {
+  it('returns the manual theme when autoTheme is disabled', () => {
+    const s = { ...defaultSettings(), theme: 'light' as const }
+    expect(effectiveTheme(s, new Date(2026, 0, 1, 2))).toBe('light')
+  })
+
+  it('returns the scheduled theme when autoTheme is enabled', () => {
+    const s = {
+      ...defaultSettings(),
+      theme: 'light' as const,
+      autoTheme: { enabled: true, lightStartHour: 7, darkStartHour: 21 },
+    }
+    expect(effectiveTheme(s, new Date(2026, 0, 1, 13))).toBe('light')
+    expect(effectiveTheme(s, new Date(2026, 0, 1, 23))).toBe('dark')
   })
 })
 
