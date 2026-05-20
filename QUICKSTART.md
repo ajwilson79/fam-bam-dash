@@ -23,6 +23,7 @@ Once the app is open:
    - Choose **°F / mph** or **°C / km/h** under Units
    - Under **💤 Screensaver**, enable picture frame mode and set your preferred idle timeout (default 5 minutes)
    - Under **🚶 Motion Sensor**, configure night hours and screen-off timeouts (only relevant if you have a PIR sensor on GPIO pin 17)
+   - Under **🎨 Theme**, pick dark or light — or check **Switch automatically by time of day** and set the hours the light and dark themes begin
 3. Go to the **📅 Calendars** tab to connect a Google account (requires OAuth setup – see below)
 4. Go to the **🖼️ Photos** tab to upload family photos directly from the browser
 5. Go to the **✅ To-Do** tab to create lists for each family member
