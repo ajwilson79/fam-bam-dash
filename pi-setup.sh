@@ -52,6 +52,7 @@ echo "  6. Set up boot splash screen and session wallpaper"
 echo "  7. Optionally configure portrait display rotation"
 echo "  8. Optionally set up the PIR motion sensor service"
 echo "  9. Optionally set up a weekly reboot schedule"
+echo "  10. Optionally install the WiFi watchdog (auto-recovers from dropped WiFi)"
 echo ""
 ask "Continue? [Y/n]:"
 read -r REPLY
@@ -67,7 +68,7 @@ fi
 
 # ── Step 1: Node.js ───────────────────────────────────────────────────────────
 
-header "Step 1 of 9: Node.js"
+header "Step 1 of 10: Node.js"
 
 NODE_OK=false
 if command -v node &>/dev/null; then
@@ -105,7 +106,7 @@ fi
 
 # ── Step 2: Configure .env.local ─────────────────────────────────────────────
 
-header "Step 2 of 9: Environment Variables"
+header "Step 2 of 10: Environment Variables"
 
 ENV_FILE="$APP_DIR/.env.local"
 
@@ -159,7 +160,7 @@ fi
 
 # ── Step 3: Build ─────────────────────────────────────────────────────────────
 
-header "Step 3 of 9: Build"
+header "Step 3 of 10: Build"
 
 step "Installing npm dependencies..."
 cd "$APP_DIR"
@@ -173,7 +174,7 @@ cd "$REPO_DIR"
 
 # ── Step 4: App systemd service ───────────────────────────────────────────────
 
-header "Step 4 of 9: App Service"
+header "Step 4 of 10: App Service"
 
 if [ -f "$SERVICE_FILE" ]; then
     warn "fam-bam-dash service already exists — reinstalling."
@@ -213,7 +214,7 @@ fi
 
 # ── Step 5: Kiosk mode ────────────────────────────────────────────────────────
 
-header "Step 5 of 9: Kiosk Mode"
+header "Step 5 of 10: Kiosk Mode"
 
 KIOSK_SCRIPT="$REPO_DIR/kiosk-setup.sh"
 if [ ! -f "$KIOSK_SCRIPT" ]; then
@@ -225,7 +226,7 @@ fi
 
 # ── Step 6: Splash screen and wallpaper ──────────────────────────────────────
 
-header "Step 6 of 9: Boot Splash & Wallpaper"
+header "Step 6 of 10: Boot Splash & Wallpaper"
 
 SPLASH_SCRIPT="$REPO_DIR/scripts/splash-setup.sh"
 if [ ! -f "$SPLASH_SCRIPT" ]; then
@@ -240,7 +241,7 @@ fi
 
 # ── Step 7: Portrait rotation ─────────────────────────────────────────────────
 
-header "Step 7 of 9: Display Rotation"
+header "Step 7 of 10: Display Rotation"
 
 echo "  The dashboard is optimised for portrait (vertical) orientation."
 if [ "$IS_PI5" = true ]; then
@@ -331,7 +332,7 @@ fi
 
 # ── Step 8: Motion sensor ─────────────────────────────────────────────────────
 
-header "Step 8 of 9: Motion Sensor (optional)"
+header "Step 8 of 10: Motion Sensor (optional)"
 
 echo "  A PIR motion sensor on GPIO pin 17 can wake the screen on motion,"
 echo "  switch between dashboard and picture frame modes by time of day,"
@@ -354,7 +355,7 @@ fi
 
 # ── Step 9: Reboot schedule ───────────────────────────────────────────────────
 
-header "Step 9 of 9: Reboot Schedule (optional)"
+header "Step 9 of 10: Reboot Schedule (optional)"
 
 echo "  A weekly scheduled reboot keeps the Pi healthy on long kiosk runs."
 echo "  This also verifies all services are set to restart on boot."
@@ -372,6 +373,28 @@ if [[ -z "$DO_SCHEDULE" || "$DO_SCHEDULE" =~ ^[Yy]$ ]]; then
     fi
 else
     ok "Skipped — run scripts/reboot-schedule.sh later to configure."
+fi
+
+# ── Step 10: WiFi watchdog ────────────────────────────────────────────────────
+
+header "Step 10 of 10: WiFi Watchdog (optional)"
+
+echo "  Checks connectivity every 3 minutes and recovers from dropped WiFi:"
+echo "  reconnect, then restart NetworkManager, then reboot."
+echo ""
+ask "  Install the WiFi watchdog? [Y/n]:"
+read -r DO_WATCHDOG
+
+if [[ -z "$DO_WATCHDOG" || "$DO_WATCHDOG" =~ ^[Yy]$ ]]; then
+    WATCHDOG_SCRIPT="$REPO_DIR/wifi-watchdog-setup.sh"
+    if [ ! -f "$WATCHDOG_SCRIPT" ]; then
+        warn "wifi-watchdog-setup.sh not found — skipping."
+    else
+        chmod +x "$WATCHDOG_SCRIPT"
+        bash "$WATCHDOG_SCRIPT"
+    fi
+else
+    ok "Skipped — run wifi-watchdog-setup.sh later to install."
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────

@@ -120,7 +120,7 @@ chmod +x pi-setup.sh
 ./pi-setup.sh
 ```
 
-This installs Node.js 20, walks through `app/.env.local` configuration, builds the app, installs it as a systemd service, sets up Chromium kiosk mode, configures a Plymouth boot splash and session wallpaper (if images are present in `assets/`), optionally rotates the display to portrait, optionally installs the PIR motion sensor service, and optionally configures a weekly reboot schedule for long-running kiosk health.
+This installs Node.js 20, walks through `app/.env.local` configuration, builds the app, installs it as a systemd service, sets up Chromium kiosk mode, configures a Plymouth boot splash and session wallpaper (if images are present in `assets/`), optionally rotates the display to portrait, optionally installs the PIR motion sensor service, optionally configures a weekly reboot schedule for long-running kiosk health, and optionally installs a WiFi watchdog that recovers from dropped connections.
 
 ## Display Setup (non-Pi)
 
