@@ -18,7 +18,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-simple-keyboard": "^3.8.196",
-    "sharp": "^0.34.5"
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
@@ -38,7 +38,7 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2",
-    "vitest": "^3.0.0"
+    "vitest": "^5.1.1"
   },
   "overrides": {
     "ws": "^8.20.1"
