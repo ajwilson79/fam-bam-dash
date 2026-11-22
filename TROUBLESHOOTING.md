@@ -158,8 +158,30 @@ Log out and back in to apply — no reboot needed.
 ### How do I know which transform value to use?
 A physical anticlockwise rotation (bottom of monitor on the right) requires `--transform 270`. A physical clockwise rotation (bottom of monitor on the left) requires `--transform 90`. If the image is wrong, swap them — it takes 30 seconds to fix.
 
-### Image is correct but touch is offset (Pi 5 / Wayland)
-Touch input usually follows the display rotation automatically on Wayland. If it doesn't, see the libinput calibration section — run `libinput list-devices | grep -A5 -i touch` and bring the output to the troubleshooting chat.
+### Image is correct but touch is rotated or offset (Pi 5 / Wayland)
+Symptoms: swiping sideways scrolls the calendar up/down, or tapping the upper left selects something near the bottom right, so you can't reach the ⚙ button. The touch panel reports coordinates in the screen's *native* landscape orientation, and labwc doesn't always rotate them to match `wlr-randr --transform`. Fix it with a libinput calibration matrix in `~/.config/labwc/rc.xml`:
+
+```xml
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+	<touch deviceName="YOUR TOUCH DEVICE NAME" mapToOutput="HDMI-A-1" mouseEmulation="yes"/>
+	<libinput>
+		<device category="touch">
+			<calibrationMatrix>0 1 0 -1 0 1</calibrationMatrix>
+		</device>
+	</libinput>
+</openbox_config>
+```
+
+Find your device name with `libinput list-devices | grep -i -B1 -A3 touch` (or `grep Name /proc/bus/input/devices`). Then reload the compositor without rebooting: `kill -HUP $(pgrep -x labwc)`.
+
+Which matrix to use (tested on an Acer UT241Y over HDMI):
+
+| `--transform` | Matrix | Status |
+|---|---|---|
+| `270` | `0 1 0 -1 0 1` | Verified working |
+| `90` | `0 -1 1 1 0 0` | Expected by symmetry, untested |
+
+If swipes scroll the right way but taps land mirrored (upper left ↔ lower right), you're 180° off, so use the other matrix. If swipes are still on the wrong axis, the matrix isn't being applied: check the device name and that `rc.xml` is valid XML. Keep a backup of the file before editing. This setup is not done by `pi-setup.sh`; it depends on your specific screen.
 
 ### display_rotate in config.txt has no effect (Pi 5)
 `display_rotate` is not supported on Pi 5. Use `wlr-randr` instead. The `pi-setup.sh` script handles this automatically by detecting the Pi model. If you set it up manually, add this line to `~/.config/labwc/autostart` before the Chromium entry:
