@@ -19,7 +19,7 @@ Fam Bam Dash is a customizable, touch-friendly smart home dashboard designed to 
 - **Web App Shortcuts** – Add tiles for any local-network web app (recipe manager, home automation, media server, etc.); each tile opens in a full-screen overlay with a keyboard toggle; configured from the 🔗 Apps tab in Settings; persisted in `app/data/settings.json`
 - **Exit Kiosk** – A PIN-gated "Exit Kiosk" button in the ⚙️ Settings tab closes Chromium so you can access the Pi desktop without a hard reboot
 - **Live Multi-Screen Sync** – Any change (settings, todos, or countdowns) made on one device instantly reloads all other open screens via Server-Sent Events; the screen that made the change is never disrupted
-- **Dark / Light Mode** – Toggle from the floating button on the dashboard
+- **Glass Design, Dark / Light Mode** – Frosted-glass cards in a Midnight teal (dark) or Daylight (light) palette; toggle from the floating button, or schedule it. Choose a soft gradient or a blurred copy of the current slideshow photo as the background (⚙️ Settings → Theme)
 - **Portrait-Optimized Layout** – Two-column grid scaled for tall screens
 - **Self-Hosted** – Runs entirely on Node.js; no separate backend required
 
