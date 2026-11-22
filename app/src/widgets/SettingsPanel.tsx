@@ -341,6 +341,18 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
                       className="w-5 h-5 cursor-pointer" />
                     <span>Switch automatically by time of day</span>
                   </label>
+                  <div>
+                    <span className="text-sm text-slate-300 block mb-2">Background</span>
+                    <div className="flex gap-6">
+                      {([['gradient', 'Soft gradient'], ['photo', 'Blurred current photo']] as const).map(([v, label]) => (
+                        <label key={v} className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" name="backdrop" value={v} checked={s.backdrop === v}
+                            onChange={() => update({ ...s, backdrop: v })} className="cursor-pointer" />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                   {s.autoTheme.enabled && (
                     <div className="grid grid-cols-2 gap-3">
                       <label className="flex flex-col">

@@ -14,6 +14,7 @@ import { syncCalendars } from './lib/gapi'
 import { syncFromServer } from './lib/todo'
 import { verifyAdminAccess } from './lib/admin'
 import { notifyPhotosChanged } from './lib/photos'
+import { getBackdropPhoto, subscribeBackdropPhoto } from './lib/backdrop'
 
 function App() {
   const [openSettings, setOpenSettings] = useState(false)
@@ -23,6 +24,8 @@ function App() {
   const [theme, setTheme] = useState(() => effectiveTheme(loadSettings()))
   const [autoThemeOn, setAutoThemeOn] = useState(() => loadSettings().autoTheme.enabled)
   const [webApps, setWebApps] = useState(() => loadSettings().webApps)
+  const [backdrop, setBackdrop] = useState(() => loadSettings().backdrop)
+  const [backdropPhoto, setBackdropPhotoSrc] = useState(getBackdropPhoto)
   const [isIdle, setIsIdle] = useState(false)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resetIdleTimerRef = useRef<(() => void) | null>(null)
@@ -72,9 +75,12 @@ function App() {
       setTheme(effectiveTheme(s))
       setAutoThemeOn(s.autoTheme.enabled)
       setWebApps(s.webApps)
+      setBackdrop(s.backdrop)
     })
     return () => { unsub() }
   }, [])
+
+  useEffect(() => subscribeBackdropPhoto(setBackdropPhotoSrc), [])
 
   // Auto dark/light schedule: re-evaluate the effective theme every minute so
   // the display flips at the configured hours without a reload. A no-op when
@@ -182,14 +188,20 @@ function App() {
   }, [])
 
   return (
-    <div className="dash-root" data-theme={theme}>
+    <div className="dash-root" data-theme={theme} data-backdrop={backdrop}>
+      {backdrop === 'photo' && backdropPhoto && (
+        <div className="dash-backdrop" aria-hidden="true">
+          {/* key swaps the node so each new photo cross-fades in */}
+          <img key={backdropPhoto} src={backdropPhoto} alt="" />
+        </div>
+      )}
       <aside className="dash-left" ref={dashLeftRef}>
         <Calendar />
       </aside>
 
       <main className="dash-right">
         <section className="dash-photo">
-          <PhotoSlideshow />
+          <PhotoSlideshow publishBackdrop />
         </section>
 
         <div className="dash-middle">

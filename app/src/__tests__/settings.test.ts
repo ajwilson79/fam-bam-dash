@@ -82,6 +82,20 @@ describe('loadSettings', () => {
   })
 })
 
+describe('backdrop setting', () => {
+  it('defaults to the gradient backdrop', () => {
+    expect(defaultSettings().backdrop).toBe('gradient')
+    expect(loadSettings().backdrop).toBe('gradient')
+  })
+
+  it('accepts "photo" and falls back to gradient for anything else', () => {
+    localStorage.setItem('fam-bam-settings', JSON.stringify({ backdrop: 'photo' }))
+    expect(loadSettings().backdrop).toBe('photo')
+    localStorage.setItem('fam-bam-settings', JSON.stringify({ backdrop: 'neon' }))
+    expect(loadSettings().backdrop).toBe('gradient')
+  })
+})
+
 describe('themeForHour', () => {
   it('returns light inside a normal daytime window [7, 21)', () => {
     expect(themeForHour(7, 7, 21)).toBe('light')

@@ -1,8 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 html, body, #root {
   height: 100%;
@@ -13,26 +11,47 @@ html, body, #root {
 * { box-sizing: border-box; }
 
 /* ── Theme Tokens ── */
+/* Glass design. --color-base/card/elevated stay SOLID (admin panels, keyboard and
+   modals sit on them); the translucent surfaces are --glass / --glass-border. */
 :root {
-  --color-base: #0b0906;
-  --color-card: #161209;
-  --color-elevated: #211c12;
-  --color-text: #f0e6d3;
-  --color-text-muted: #6e5f48;
-  --color-accent: #c8923a;
-  --color-divider: #2a2115;
-  --font-display: 'DM Serif Display', Georgia, serif;
+  /* Midnight teal (dark) */
+  --color-base: #0c1a24;
+  --color-card: #12272f;
+  --color-elevated: #1b3640;
+  --color-text: #eaf6f6;
+  --color-text-muted: #8fb3b6;
+  --color-accent: #5eead4;
+  --color-accent-2: #7dd3fc;
+  --color-on-accent: #062a2a;
+  --color-divider: #28464e;
+  --bg-gradient: linear-gradient(160deg, #0c1a24 0%, #12303a 55%, #173f45 100%);
+  --glass: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.13);
+  --glass-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  --backdrop-tint: rgba(8, 20, 28, 0.58);
+  --backdrop-filter: blur(60px) saturate(1.3) brightness(0.6);
+  --font-display: 'Outfit', system-ui, sans-serif;
   --font-body: 'Outfit', system-ui, sans-serif;
+  --radius-card: 24px;
 }
 
 [data-theme="light"] {
-  --color-base: #faf6ef;
+  /* Daylight (light) */
+  --color-base: #e6eefa;
   --color-card: #ffffff;
-  --color-elevated: #ede6d8;
-  --color-text: #1a1108;
-  --color-text-muted: #8a7860;
-  --color-accent: #a86820;
-  --color-divider: #ddd0be;
+  --color-elevated: #eef2fb;
+  --color-text: #1b2433;
+  --color-text-muted: #6b7a90;
+  --color-accent: #3b6df0;
+  --color-accent-2: #e0709a;
+  --color-on-accent: #ffffff;
+  --color-divider: #d3dcec;
+  --bg-gradient: linear-gradient(160deg, #dbe9f7 0%, #eef1fb 55%, #f6eef5 100%);
+  --glass: rgba(255, 255, 255, 0.62);
+  --glass-border: rgba(255, 255, 255, 0.9);
+  --glass-shadow: 0 18px 40px rgba(60, 80, 140, 0.16);
+  --backdrop-tint: rgba(238, 243, 252, 0.6);
+  --backdrop-filter: blur(60px) saturate(1.2) brightness(1.1);
 }
 
 body {
@@ -48,20 +67,63 @@ body {
   width: 100vw;
   height: 100vh;
   display: grid;
-  grid-template-columns: 30% 70%;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
+  gap: 14px;
+  padding: 14px;
   overflow: hidden;
   position: relative;
   background-color: var(--color-base);
+  background-image: var(--bg-gradient);
   color: var(--color-text);
 }
 
+/* Frosted surface shared by every dashboard card */
+.dash-left,
+.dash-middle,
+.todo-panel-col {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+/* Photo-adaptive backdrop: heavily blurred copy of the current slideshow photo */
+.dash-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.dash-backdrop img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.4);
+  filter: var(--backdrop-filter);
+  animation: backdrop-in 1.2s ease both;
+}
+.dash-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--backdrop-tint);
+}
+@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+
 .dash-left {
-  height: 100vh;
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
-  border-right: 1px solid var(--color-divider);
-  padding: 1.25rem 1rem 1.25rem 1.25rem;
+  padding: 1.25rem 1.25rem;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
 }
@@ -69,16 +131,27 @@ body {
 .dash-left::-webkit-scrollbar { display: none; }
 
 .dash-right {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-rows: 44vh minmax(17vh, auto) 1fr auto;
-  height: 100vh;
+  /* the app-tile strip, when present, becomes an implicit 4th (auto) row, so an
+     empty strip doesn't leave a stray gap under the to-do cards */
+  grid-template-rows: 42% auto minmax(0, 1fr);
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
 .dash-photo {
   width: 100%;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
+  border-radius: var(--radius-card);
+  box-shadow: var(--glass-shadow);
+  /* clip the Ken Burns zoom to the rounded corners */
+  isolation: isolate;
 }
 
 /* ── Photo slideshow Ken Burns ── */
@@ -104,8 +177,6 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: auto auto;
-  border-top: 1px solid var(--color-divider);
-  border-bottom: 1px solid var(--color-divider);
   overflow: hidden;
 }
 
@@ -114,7 +185,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0.5rem 2rem;
-  border-right: 1px solid var(--color-divider);
+  border-right: 1px solid var(--glass-border);
   grid-row: 1;
 }
 
@@ -129,19 +200,18 @@ body {
 .dash-weather-full {
   grid-column: 1 / -1;
   grid-row: 2;
-  padding: 0.4rem 1.25rem 0.5rem;
-  border-top: 1px solid var(--color-divider);
+  padding: 0.4rem 1.25rem 0.6rem;
+  border-top: 1px solid var(--glass-border);
   overflow: hidden;
 }
 
 .dash-todos {
-  padding: 0.75rem 1rem 0.75rem 1.25rem;
+  padding: 0;
+  min-height: 0;
   overflow: hidden;
 }
 
 .dash-apps {
-  padding: 0.5rem 1.25rem 0.75rem;
-  border-top: 1px solid var(--color-divider);
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
@@ -151,10 +221,12 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  background: var(--color-elevated);
-  border: 1px solid var(--color-divider);
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   color: var(--color-text);
   text-decoration: none;
   font-size: 0.875rem;
@@ -252,9 +324,10 @@ body {
   font-family: var(--font-display);
   /* portrait: vw is narrow so scale off the smaller of vw/vh */
   font-size: clamp(52px, min(9vw, 7vh), 110px);
+  font-weight: 300;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
 }
 
 .clock-ampm {
@@ -290,7 +363,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
-  border-right: 1px solid var(--color-divider);
+  border-right: 1px solid var(--glass-border);
   padding-right: 1rem;
 }
 
@@ -302,6 +375,7 @@ body {
 .weather-temp {
   font-family: var(--font-display);
   font-size: clamp(1.8rem, min(4vw, 3.5vh), 3rem);
+  font-weight: 300;
   line-height: 1;
   color: var(--color-text);
 }
@@ -330,14 +404,16 @@ body {
   gap: 0.1rem;
   min-width: 2.8rem;
   padding: 0.3rem 0.2rem;
-  border-radius: 0.5rem;
-  background: var(--color-elevated);
+  border-radius: 0.75rem;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
   flex-shrink: 0;
 }
-.weather-hour.is-now { background: var(--color-accent); color: #000; }
+.weather-hour.is-now { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); }
 .weather-hour.is-now .weather-hour-time,
-.weather-hour.is-now .weather-hour-temp { color: #000; }
-.weather-hour-time { font-size: 0.65rem; color: var(--color-muted); }
+.weather-hour.is-now .weather-hour-temp,
+.weather-hour.is-now .weather-hour-pop { color: var(--color-on-accent); }
+.weather-hour-time { font-size: 0.65rem; color: var(--color-text-muted); }
 .weather-hour-icon { font-size: 1rem; }
 .weather-hour-temp { font-size: 0.75rem; font-weight: 600; }
 .weather-hour-pop  { font-size: 0.6rem; color: #60a5fa; }
@@ -351,8 +427,9 @@ body {
 
 .weather-day {
   flex: 1;
-  background: var(--color-elevated);
-  border-radius: 0.4rem;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 0.75rem;
   padding: 0.3rem 0.15rem;
   text-align: center;
   display: flex;
@@ -405,7 +482,7 @@ body {
 
 .agenda-day {
   padding: 0.6rem 0;
-  border-bottom: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .agenda-day:last-child { border-bottom: none; }
@@ -421,16 +498,17 @@ body {
 
 .agenda-event {
   display: grid;
-  grid-template-columns: 0.6rem 5rem 1fr auto;
-  gap: 0.4rem;
-  padding: 0.25rem 0;
+  grid-template-columns: 4px 5rem 1fr auto;
+  gap: 0.6rem;
+  padding: 0.3rem 0;
   align-items: center;
 }
 
+/* calendar colour marker: a slim vertical pill (colour comes inline per calendar) */
 .agenda-event-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
+  width: 4px;
+  height: 1.5rem;
+  border-radius: 4px;
   flex-shrink: 0;
   align-self: center;
 }
@@ -461,10 +539,10 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--color-card);
-  border: 1px solid var(--color-accent);
-  border-radius: 0.4rem;
-  padding: 0.3rem 0.6rem;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  border-radius: 0.9rem;
+  padding: 0.4rem 0.75rem;
   gap: 0.5rem;
 }
 
@@ -501,7 +579,7 @@ body {
   opacity: 1;
   background: var(--color-accent);
   border-color: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 
 /* ── Todo Panel (dashboard view) ── */
@@ -517,10 +595,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-card);
-  border-radius: 0.5rem;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--color-divider);
+  padding: 0.85rem 1rem;
   transition: outline 0.1s;
 }
 .todo-panel-col.drag-over {
@@ -536,7 +611,7 @@ body {
   color: var(--color-text-muted);
   margin-bottom: 0.4rem;
   padding-bottom: 0.35rem;
-  border-bottom: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--glass-border);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -564,7 +639,7 @@ body {
   border-radius: 0.3rem;
   transition: background 0.1s;
 }
-.todo-panel-item:hover { background: var(--color-elevated); }
+.todo-panel-item:hover { background: var(--glass); }
 
 /* Custom checkbox */
 .todo-panel-check-label {
@@ -584,8 +659,8 @@ body {
   display: block;
   width: 1rem;
   height: 1rem;
-  border-radius: 0.2rem;
-  border: 1.5px solid var(--color-text-muted);
+  border-radius: 50%;
+  border: 2px solid var(--color-text-muted);
   background: transparent;
   transition: background 0.15s, border-color 0.15s;
   position: relative;
@@ -601,7 +676,7 @@ body {
   top: 0.05rem;
   width: 0.35rem;
   height: 0.6rem;
-  border: 2px solid #fff;
+  border: 2px solid var(--color-on-accent);
   border-top: none;
   border-left: none;
   transform: rotate(45deg);
@@ -628,9 +703,9 @@ body {
 .todo-panel-countdown {
   font-size: clamp(8px, 0.8vw, 10px);
   color: var(--color-text-muted);
-  background: var(--color-elevated);
-  padding: 0.1em 0.35em;
-  border-radius: 0.25rem;
+  background: var(--glass);
+  padding: 0.1em 0.45em;
+  border-radius: 999px;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -774,7 +849,7 @@ body {
 .todo-admin-done-badge {
   font-size: 0.7rem;
   color: var(--color-accent);
-  background: rgba(200, 146, 58, 0.12);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
   padding: 0.1em 0.4em;
   border-radius: 0.25rem;
   flex-shrink: 0;
@@ -841,7 +916,7 @@ body {
   cursor: pointer;
   transition: opacity 0.15s;
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -864,7 +939,7 @@ body {
 }
 .photo-dropzone:hover, .photo-dropzone.is-over {
   border-color: var(--color-accent);
-  background: rgba(200, 146, 58, 0.06);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 
 .photo-dropzone-icon { font-size: 2rem; margin-bottom: 0.4rem; color: var(--color-text-muted); }
@@ -1097,7 +1172,7 @@ body {
   cursor: pointer;
   transition: opacity 0.15s;
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 .cal-admin-btn:hover:not(:disabled) { opacity: 0.85; }
 .cal-admin-btn:disabled { opacity: 0.45; cursor: default; }
@@ -1133,6 +1208,12 @@ body {
 }
 
 .settings-fab:hover { opacity: 1; }
+
+/* The Settings panel hard-codes dark-mode Tailwind slate colours; remap them in light mode */
+[data-theme="light"] .bg-slate-900 { background-color: #ffffff; color: var(--color-text); }
+[data-theme="light"] .text-slate-300,
+[data-theme="light"] .text-slate-400 { color: var(--color-text-muted); }
+[data-theme="light"] .border-slate-600 { border-color: var(--color-divider); }
 
 /* ── Tailwind compat utilities ── */
 .bg-theme-base     { background-color: var(--color-base); }
@@ -1181,11 +1262,11 @@ body {
 .vkb-theme .hg-button:active,
 .vkb-theme .hg-button.hg-activeButton {
   background: var(--color-accent);
-  color: #000;
+  color: var(--color-on-accent);
 }
 
 .vkb-theme .hg-button[data-skbtn="{space}"] { flex-grow: 4; }
-.vkb-theme .hg-button[data-skbtn="{done}"]  { background: var(--color-accent); color: #000; flex-grow: 2; font-weight: 600; }
+.vkb-theme .hg-button[data-skbtn="{done}"]  { background: var(--color-accent); color: var(--color-on-accent); flex-grow: 2; font-weight: 600; }
 .vkb-theme .hg-button[data-skbtn="{bksp}"]  { flex-grow: 1.5; }
 .vkb-theme .hg-button[data-skbtn="{enter}"] { flex-grow: 1.5; }
 .vkb-theme .hg-button[data-skbtn="{shift}"] { flex-grow: 1.5; }

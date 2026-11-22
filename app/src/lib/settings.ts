@@ -20,6 +20,7 @@ export type Settings = {
     lightStartHour: number  // 0–23, hour the light theme begins (default 7 = 7am)
     darkStartHour: number   // 0–23, hour the dark theme begins (default 21 = 9pm)
   }
+  backdrop: 'gradient' | 'photo'           // page background behind the glass cards
   webApps: WebApp[]
 }
 
@@ -61,6 +62,7 @@ export function defaultSettings(): Settings {
     },
     theme: 'dark',
     autoTheme: { enabled: false, lightStartHour: 7, darkStartHour: 21 },
+    backdrop: 'gradient',
     webApps: [],
   }
 }
@@ -149,6 +151,7 @@ function validateSettings(raw: unknown): Settings {
       lightStartHour: Math.round(num(at.lightStartHour, def.autoTheme.lightStartHour, 0, 23)),
       darkStartHour: Math.round(num(at.darkStartHour, def.autoTheme.darkStartHour, 0, 23)),
     },
+    backdrop: r.backdrop === 'photo' ? 'photo' : 'gradient',
     webApps: (Array.isArray(r.webApps) ? r.webApps : [])
       .filter((a): a is Record<string, unknown> => a !== null && typeof a === 'object')
       .map(a => ({ name: strOr(a.name, ''), url: strOr(a.url, ''), icon: strOr(a.icon, '🔗') }))

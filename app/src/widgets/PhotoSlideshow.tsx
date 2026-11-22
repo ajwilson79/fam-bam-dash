@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchGooglePhotosAlbum, getGooglePhotosToken, loadLocalPhotos, loadUploadedPhotos, shuffle, type PhotoItem } from '../lib/photos'
 import { loadSettings, subscribeSettings } from '../lib/settings'
+import { setBackdropPhoto } from '../lib/backdrop'
 
 function useLocalAndGooglePhotos() {
   const [photos, setPhotos] = useState<PhotoItem[]>([])
@@ -46,9 +47,11 @@ function useLocalAndGooglePhotos() {
 
 const KB_VARIANTS = ['kb-1', 'kb-2', 'kb-3', 'kb-4']
 
-export default function PhotoSlideshow({ intervalMs, shuffleOn }: {
+export default function PhotoSlideshow({ intervalMs, shuffleOn, publishBackdrop }: {
   intervalMs?: number
   shuffleOn?: boolean
+  /** Report the current photo to the page backdrop (dashboard instance only). */
+  publishBackdrop?: boolean
 }) {
   const { photos, error, loading } = useLocalAndGooglePhotos()
   const [idx, setIdx] = useState(0)
@@ -74,6 +77,12 @@ export default function PhotoSlideshow({ intervalMs, shuffleOn }: {
     }, resolvedInterval)
     return () => clearInterval(id)
   }, [list, resolvedInterval])
+
+  const currentSrc = list.length > 0 ? list[idx % list.length].src : null
+  useEffect(() => {
+    if (!publishBackdrop) return
+    setBackdropPhoto(currentSrc)
+  }, [publishBackdrop, currentSrc])
 
   if (error) return (
     <div className="w-full h-full bg-slate-800 rounded-xl flex items-center justify-center">
