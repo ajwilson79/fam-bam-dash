@@ -24,4 +24,5 @@ chromium \
   --disable-restore-session-state \
   --disable-session-crashed-bubble \
   --password-store=basic \
+  --load-extension="$HOME/fam-bam-dash/kiosk-extension" \
   "http://localhost:12000"

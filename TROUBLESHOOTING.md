@@ -189,6 +189,14 @@ If swipes scroll the right way but taps land mirrored (upper left ↔ lower righ
 wlr-randr --output HDMI-A-1 --transform 90
 ```
 
+## Web App Tiles (Kiosk)
+
+### A link opened a new page and there's no way back to the dashboard
+Pages outside the dashboard should show a **← Back to Dashboard** button, and close on their own after 5 idle minutes. Both come from the extension in `kiosk-extension/`. If they're missing:
+- Check Chromium was started with it: `pgrep -af chromium | grep -o 'load-extension=[^ ]*kiosk-extension'`
+- If nothing prints, add `--load-extension="$HOME/fam-bam-dash/kiosk-extension"` to `~/.config/labwc/autostart` (running `deploy.sh` does this) and reboot
+- To get unstuck right away: `sudo reboot`
+
 ## Admin PIN
 
 ### Settings won't open — PIN prompt keeps rejecting me

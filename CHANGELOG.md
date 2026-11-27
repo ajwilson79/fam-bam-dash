@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Kiosk "Back to Dashboard" button** – Links that open outside the dashboard (e.g. from a web app tile) no longer trap the touchscreen. A bundled Chromium extension (`kiosk-extension/`) shows a floating button on those pages and returns to the dashboard after 5 idle minutes.
 - **Web app shortcuts** – Add tiles for any local-network web app (recipe manager, home automation, media server, etc.) from Settings → 🔗 Apps. Each tile opens in a full-screen iframe overlay with a keyboard toggle. The `.dash-apps` tile strip hides automatically when no apps are configured. Stored in `app/data/settings.json` under `webApps: WebApp[]`.
 - **Emoji icon picker for web app shortcuts** – The Apps form shows a grid of 28 tappable emoji buttons instead of a text input; the selected emoji highlights in blue. Works for both adding and editing apps.
 - **Inline editing for web app shortcuts** – Each app in Settings → 🔗 Apps has an Edit button that expands the row into a pre-filled form (emoji picker, name, URL) with Save/Cancel. No need to delete and re-add to fix a typo.

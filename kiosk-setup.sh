@@ -5,6 +5,7 @@
 
 set -e
 
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 AUTOSTART_DIR="$HOME/.config/labwc"
 AUTOSTART_FILE="$AUTOSTART_DIR/autostart"
 RC_FILE="$AUTOSTART_DIR/rc.xml"
@@ -99,6 +100,7 @@ $CHROMIUM_BIN \\
   --disable-restore-session-state \\
   --disable-session-crashed-bubble \\
   --password-store=basic \\
+  --load-extension="$REPO_DIR/kiosk-extension" \\
   "$KIOSK_URL"
 EOF
 
