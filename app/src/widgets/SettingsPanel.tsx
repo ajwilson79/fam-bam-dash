@@ -268,6 +268,13 @@ export default function SettingsPanel({ open, onClose }: { open: boolean; onClos
                       onChange={e => update({ ...s, idle: { ...s.idle, timeoutMinutes: Math.max(1, Number(e.target.value)) } })}
                       className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none w-32" />
                   </label>
+                  <label className="flex flex-col">
+                    <span className="text-sm text-slate-300 mb-1">Close web apps after idle (minutes)</span>
+                    <input type="number" min={1} max={1440}
+                      value={s.idle.appTimeoutMinutes}
+                      onChange={e => update({ ...s, idle: { ...s.idle, appTimeoutMinutes: Math.max(1, Number(e.target.value)) } })}
+                      className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 focus:border-sky-500 outline-none w-32" />
+                  </label>
                 </div>
               </section>
 

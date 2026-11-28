@@ -123,6 +123,39 @@ function App() {
     }
   }, [activeApp])
 
+  // An open web app covers the screensaver, so close it after a stretch with no
+  // activity. The app's iframe is usually cross-origin and its events never
+  // reach this window: window blur catches the first tap into it, and the kiosk
+  // extension posts a message for activity after that.
+  useEffect(() => {
+    if (!activeApp) return
+    let timer: ReturnType<typeof setTimeout>
+    function resetAppTimer() {
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        setActiveApp(null)
+        resetIdleTimerRef.current?.()  // show the dashboard, then count down to the screensaver
+      }, loadSettings().idle.appTimeoutMinutes * 60_000)
+    }
+    function onMessage(e: MessageEvent) {
+      if (e.data?.source === 'fam-bam-kiosk' && e.data.type === 'activity') {
+        resetAppTimer()
+        resetIdleTimerRef.current?.()
+      }
+    }
+    const events = ['pointerdown', 'keydown', 'touchstart', 'blur'] as const
+    events.forEach(e => window.addEventListener(e, resetAppTimer, { passive: true }))
+    window.addEventListener('message', onMessage)
+    resetAppTimer()
+    const unsub = subscribeSettings(resetAppTimer)
+    return () => {
+      clearTimeout(timer)
+      events.forEach(e => window.removeEventListener(e, resetAppTimer))
+      window.removeEventListener('message', onMessage)
+      unsub()
+    }
+  }, [activeApp])
+
   function toggleKeyboard() {
     const next = !keyboardVisible
     fetch('/api/keyboard', {
@@ -152,6 +185,7 @@ function App() {
       } else if (e.data === 'display-mode:dashboard') {
         resetIdleTimerRef.current?.()
       } else if (e.data === 'display-mode:screensaver') {
+        setActiveApp(null)  // an open app would sit on top of the screensaver
         setIsIdle(true)
       }
     }

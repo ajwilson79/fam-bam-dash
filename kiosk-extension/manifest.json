@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Fam Bam Kiosk Back Button",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Adds a Back to Dashboard button to pages the kiosk opens outside the dashboard, and returns to the dashboard when they are left idle.",
   "permissions": ["tabs", "storage", "alarms"],
   "background": { "service_worker": "background.js" },
@@ -9,7 +9,8 @@
     {
       "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": true
     }
   ]
 }

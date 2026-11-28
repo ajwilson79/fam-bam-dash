@@ -7,7 +7,11 @@ export type Settings = {
   calendar: { calendarId: string; maxEvents: number; refreshIntervalMs: number }
   slideshow: { intervalMs: number; shuffle: boolean; useGooglePhotos: boolean }
   todo: { autoRemoveMinutes: number }
-  idle: { enabled: boolean; timeoutMinutes: number }
+  idle: {
+    enabled: boolean
+    timeoutMinutes: number
+    appTimeoutMinutes: number  // minutes of inactivity before an open web app closes
+  }
   motionSensor: {
     nightStartHour: number   // 0–23, hour when night mode begins (default 22 = 10pm)
     nightEndHour: number     // 0–23, hour when night mode ends (default 7 = 7am)
@@ -53,7 +57,7 @@ export function defaultSettings(): Settings {
     },
     slideshow: { intervalMs: 12000, shuffle: true, useGooglePhotos: !!import.meta.env.VITE_GOOGLE_PHOTOS_ALBUM_ID },
     todo: { autoRemoveMinutes: 10 },
-    idle: { enabled: true, timeoutMinutes: 5 },
+    idle: { enabled: true, timeoutMinutes: 5, appTimeoutMinutes: 10 },
     motionSensor: {
       nightStartHour: 22,
       nightEndHour: 7,
@@ -138,6 +142,7 @@ function validateSettings(raw: unknown): Settings {
     idle: {
       enabled: boolOr(il.enabled, def.idle.enabled),
       timeoutMinutes: Math.round(num(il.timeoutMinutes, def.idle.timeoutMinutes, 1, 1440)),
+      appTimeoutMinutes: Math.round(num(il.appTimeoutMinutes, def.idle.appTimeoutMinutes, 1, 1440)),
     },
     motionSensor: {
       nightStartHour: Math.round(num(ms.nightStartHour, def.motionSensor.nightStartHour, 0, 23)),

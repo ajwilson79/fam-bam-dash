@@ -1,6 +1,26 @@
-// Fam Bam Kiosk — runs in top-level pages only, so apps shown inside the
-// dashboard's overlay don't get a second button.
+// Fam Bam Kiosk — top-level pages outside the dashboard get the back button.
+// Frames (such as apps shown inside the dashboard's overlay) only report activity.
 (async () => {
+  // Calls onActivity on any interaction, at most every 10 s.
+  function watchActivity(onActivity) {
+    let lastReport = 0
+    function report() {
+      if (Date.now() - lastReport < 10_000) return
+      lastReport = Date.now()
+      onActivity()
+    }
+    for (const type of ['pointerdown', 'keydown', 'wheel', 'scroll', 'touchstart']) {
+      window.addEventListener(type, report, { capture: true, passive: true })
+    }
+  }
+
+  if (window !== window.top) {
+    // The dashboard can't see events inside a cross-origin app, so tell it.
+    // The message carries nothing but "someone is here", so any origin is fine.
+    watchActivity(() => window.top.postMessage({ source: 'fam-bam-kiosk', type: 'activity' }, '*'))
+    return
+  }
+
   const isDashboard = !!document.querySelector('meta[name="fam-bam-dashboard"]')
   const reply = await chrome.runtime.sendMessage({ type: 'page-loaded', isDashboard })
   if (!reply?.external) return
@@ -43,14 +63,6 @@
   mount()
   setInterval(mount, 1000)
 
-  // Any interaction restarts the idle countdown (reported at most every 10 s).
-  let lastReport = 0
-  function report() {
-    if (Date.now() - lastReport < 10_000) return
-    lastReport = Date.now()
-    chrome.runtime.sendMessage({ type: 'activity' }).catch(() => {})
-  }
-  for (const type of ['pointerdown', 'keydown', 'wheel', 'scroll', 'touchstart']) {
-    window.addEventListener(type, report, { capture: true, passive: true })
-  }
+  // Any interaction restarts the idle countdown.
+  watchActivity(() => chrome.runtime.sendMessage({ type: 'activity' }).catch(() => {}))
 })()

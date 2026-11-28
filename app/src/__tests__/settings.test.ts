@@ -58,6 +58,16 @@ describe('loadSettings', () => {
     expect(loadSettings().calendar.maxEvents).toBe(50)
   })
 
+  it('defaults and clamps the web app idle timeout', () => {
+    // settings saved before the field existed pick up the default
+    localStorage.setItem('fam-bam-settings', JSON.stringify({ idle: { enabled: true, timeoutMinutes: 5 } }))
+    expect(loadSettings().idle.appTimeoutMinutes).toBe(10)
+    localStorage.setItem('fam-bam-settings', JSON.stringify({ idle: { appTimeoutMinutes: 0 } }))
+    expect(loadSettings().idle.appTimeoutMinutes).toBe(1)
+    localStorage.setItem('fam-bam-settings', JSON.stringify({ idle: { appTimeoutMinutes: 99999 } }))
+    expect(loadSettings().idle.appTimeoutMinutes).toBe(1440)
+  })
+
   it('falls back boolean fields to default when non-boolean', () => {
     localStorage.setItem('fam-bam-settings', JSON.stringify({ slideshow: { shuffle: 'yes', useGooglePhotos: 1 } }))
     const s = loadSettings()
